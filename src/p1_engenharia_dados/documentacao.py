@@ -429,7 +429,7 @@ def _roteiro_e_perguntas(n: Numeros) -> str:
 
 | Tempo | O que dizer |
 |---|---|
-| 0:00–0:20 | Base da PRF: {n.i('linhas_ocorrencias_bruto')} acidentes em rodovias federais (2024–2025), mais um arquivo com {n.i('linhas_pessoas_bruto')} pessoas/veículos. Objetivo: entender o que leva a um acidente **fatal**. |
+| 0:00–0:20 | **Origem e justificativa da base:** Dados Abertos da PRF, {n.i('linhas_ocorrencias_bruto')} acidentes em rodovias federais (2024–2025), mais um arquivo com {n.i('linhas_pessoas_bruto')} pessoas/veículos. Escolhida por ser recente, brasileira, ter dois arquivos para integrar e um problema com decisão clara: o que leva a um acidente **fatal**. |
 | 0:20–0:50 | Problemas: pessoas em outro arquivo, idade impossível (até {n['idade_maxima_bruta']} anos), ano de fabricação 0, "não sei" escrito de várias formas e {n.i('n_contagens_inconsistentes')} acidentes com contagem de vítimas que não fecha. |
 | 0:50–1:30 | **Funil:** {n.i('linhas_ocorrencias_bruto')} → {n.i('linhas_final')}. A base perde pouco: {n.i('d01_removidas')} duplicados e {n.i('d02_removidas')} suicídios/sinistros pessoais. Mostrar o que **não** era problema (latitude positiva em AP/RR é válida). |
 | 1:30–2:00 | **Integração e inconsistências:** idade, sexo e veículo vêm do arquivo de pessoas; valores impossíveis viram nulo, sem inventar valor. |
@@ -442,7 +442,7 @@ def _roteiro_e_perguntas(n: Numeros) -> str:
 2. **Por que removeu suicídios e sinistros pessoais?** Não são acidentes de trânsito: nenhuma fiscalização, sinalização ou obra os evitaria, e eles inflariam a taxa de fatais. Foram {n.i('d02_removidas')} acidentes.
 3. **Por que não imputou a idade que faltava?** Não dá para saber a idade real, e imputar média aprende com os dados (vaza informação do teste se feito antes do split). Deixamos o nulo e a Pessoa 3 imputa dentro do `Pipeline`.
 4. **Por que `mortos` virou alvo e as outras colunas de vítimas saíram?** `mortos` define o alvo; feridos, ilesos e a classificação são consequência do mesmo evento. Usá-los como atributo seria vazamento: o modelo "colaria" a resposta.
-5. **Por que só 2024 e 2025, e não 2026?** 2026 é um ano parcial e a PRF atualiza o arquivo todo mês; ficar com anos completos torna a análise reprodutível e evita viés de sazonalidade.
+5. **Por que escolheram essa base e só 2024 e 2025?** Ela atende às regras do projeto (mais de cinco mil linhas, variáveis numéricas e categóricas, alvo claro, exige preparação, não é base de lista nem *Hotel Booking*) e é recente, como o planejamento pedia. 2026 é um ano parcial e a PRF atualiza o arquivo todo mês; ficar com anos completos torna a análise reprodutível.
 6. **Os outliers não atrapalham?** São acidentes reais (um chega a {n.i('veiculos_maximo_bruto')} veículos) e estão entre os mais graves. Sinalizamos com `*_outlier` e a Pessoa 3 decide, estimando limites só no treino.
 7. **Por que não escalonou nem fez one-hot?** São transformações que aprendem dos dados (média, categorias) e dependem do split. Ficam no `Pipeline` da Pessoa 3.
 8. **Como garantiu que não há vazamento?** Consequências fora da base de modelagem, atributos só de hora, local, via e envolvidos, e nenhuma estatística do teste. Reconhecemos que causa e tipo só são conhecidos após o atendimento: o modelo explica risco, não funciona como alerta prévio.
