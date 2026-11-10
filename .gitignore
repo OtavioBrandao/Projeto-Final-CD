@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+# Dados brutos (baixados pelo script; os dados tratados em data/processed SÃO versionados)
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/LEIA-ME.md
+*.zip
+# SO / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
