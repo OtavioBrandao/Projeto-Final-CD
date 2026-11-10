@@ -16,8 +16,8 @@ Usamos dados reais de 130 hospitais dos EUA (1999–2008) para (1) entender os p
 |---|---|
 | Nome | Diabetes 130-US Hospitals for Years 1999-2008 |
 | Fonte | [UCI Machine Learning Repository (id 296)](https://archive.ics.uci.edu/dataset/296/diabetes+130-us+hospitals+for+years+1999-2008) |
-| Tamanho | 101.766 internações · ~50 colunas |
-| Variável-alvo | `readmitted` → binarizada em `readmit_30d` (readmitido em < 30 dias) |
+| Tamanho | 101.766 internações · 50 colunas (brutas) → **69.970 linhas × 54 colunas** após o tratamento (Pessoa 1) |
+| Variável-alvo | `readmitted` → binarizada em `readmit_30d` (readmitido em < 30 dias): 8,97% de positivos na base tratada |
 | Licença | CC BY 4.0 |
 | Referência | Strack et al. (2014), *BioMed Research International* |
 
@@ -59,10 +59,14 @@ python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-python -m src.p1_engenharia_dados.baixar_base     # baixa a base para data/raw/
+python -m src.p1_engenharia_dados.baixar_base         # baixa a base para data/raw/
+python -m src.p1_engenharia_dados.executar_pipeline   # refaz o tratamento (dados + docs/)
+pytest                                                # testes do pipeline
 ```
 
-O pipeline de tratamento (Pessoa 1) é descrito em [`docs/PLANO_IMPLEMENTACAO_PESSOA1.md`](docs/PLANO_IMPLEMENTACAO_PESSOA1.md).
+O pipeline de tratamento (Pessoa 1) está especificado em [`docs/PLANO_IMPLEMENTACAO_PESSOA1.md`](docs/PLANO_IMPLEMENTACAO_PESSOA1.md) e explicado, com números e gráficos, em [`docs/README.md`](docs/README.md).
+
+**Para as demais pessoas:** a base pronta para usar está em `data/processed/diabetes_modelagem.csv` (ou `.parquet`), com o dicionário em `data/processed/dicionario_de_dados.csv`. O alvo é `readmit_30d` (última coluna). Não há divisão treino/teste nem escalonamento/one-hot: isso é da Pessoa 3, dentro de um `Pipeline` do sklearn.
 
 ## Fluxo de trabalho (Git)
 
