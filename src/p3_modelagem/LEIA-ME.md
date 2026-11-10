@@ -1,2 +1,2 @@
 # Pessoa 3 — Modelagem Preditiva
-Entrada: data/processed/diabetes_modelagem.csv. Escalonamento/encoding/split devem ser feitos AQUI, dentro de sklearn Pipeline (sem vazamento). Entrega: modelos treinados + seções de Métodos/Métricas/Avaliação.
+Entrada: data/processed/acidentes_prf_modelagem.csv (alvo: acidente_fatal, última coluna). Escalonamento, encoding, imputação dos nulos (idade_media_condutores, pct_condutores_homens, idade_media_veiculos) e split devem ser feitos AQUI, dentro de sklearn Pipeline (sem vazamento). Use a coluna `ano` para validação temporal (2024 treino, 2025 teste), não como atributo. Entrega: modelos treinados + seções de Métodos/Métricas/Avaliação.
