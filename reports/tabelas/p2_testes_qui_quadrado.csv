@@ -1,0 +1,10 @@
+hipotese,variavel,n,n_excluidos_raros,n_categorias,qui2,gl,p_valor,v_cramer,magnitude,pct_celulas_esperado_menor_5,grupo_maior_taxa,maior_taxa_pct,grupo_menor_taxa,menor_taxa_pct,p_holm,significativo
+H1,faixa_horaria,145342,0,4,1338.937967,3,0.000000,0.095981,desprezível,0.000000,Madrugada,11.528418,Manha,4.869699,0.000000,True
+H1,dia_semana,145342,0,7,190.081605,6,0.000000,0.036164,desprezível,0.000000,domingo,8.712187,quarta-feira,6.295297,0.000000,True
+H2,tipo_pista,145342,0,3,1538.192236,2,0.000000,0.102875,pequeno,0.000000,Simples,9.769959,Múltipla,3.806081,0.000000,True
+H4,regiao,145342,0,5,1045.185234,4,0.000000,0.084801,desprezível,0.000000,Norte,11.243202,Sul,5.448626,0.000000,True
+H4,uf,145342,0,27,2129.855019,26,0.000000,0.121054,pequeno,0.000000,MA,19.832985,DF,3.349515,0.000000,True
+H6,condicao_metereologica,145338,4,8,143.191455,7,0.000000,0.031388,desprezível,0.000000,Nao_informado,10.725389,Garoa/Chuvisco,5.261129,0.000000,True
+H7,grupo_causa,145342,0,9,4621.198112,8,0.000000,0.178312,pequeno,0.000000,Pedestre,32.559958,Defeito_mecanico_ou_carga,2.076492,0.000000,True
+H7,tipo_acidente,145342,0,16,13530.285339,15,0.000000,0.305111,médio,0.000000,Colisão frontal,29.448819,Incêndio,0.028694,0.000000,True
+H9,mes,145342,0,12,28.420457,11,0.002790,0.013984,desprezível,0.000000,5.0,7.847936,2.0,6.528753,0.005580,True

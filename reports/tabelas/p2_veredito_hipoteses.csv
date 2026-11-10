@@ -1,0 +1,10 @@
+hipotese,enunciado,veredito,evidencias
+H1,Acidentes de madrugada e à noite são mais letais do que os de dia.,confirmada,"Madrugada ou noite (vs. 6h-17h): RR=1.94; Noite/madrugada, controlando o tipo de pista: RR ajustado=1.89; Noite/madrugada, controlando trecho urbano/rural: RR ajustado=1.91"
+H2,"Pista simples, trecho rural e curva elevam a letalidade.",confirmada,"Pista simples (vs. dupla/múltipla): RR=2.16; Trecho rural (vs. urbano): RR=2.03; Curva (vs. sem curva): RR=1.22; Pista simples, controlando trecho urbano/rural: RR ajustado=1.96"
+H3,"Pedestres, ciclistas, motociclistas e veículos pesados elevam a letalidade.",parcial,Pedestre envolvido: RR=4.58; Caminhão envolvido: RR=2.33; Bicicleta envolvida: RR=1.80; Ônibus envolvido: RR=1.68; Motocicleta envolvida: RR=0.79
+H4,Norte e Nordeste têm letalidade maior do que Sul e Sudeste.,confirmada,"Norte ou Nordeste (vs. Sul/Sudeste): RR=1.90; Norte/Nordeste, controlando o tipo de pista: RR ajustado=1.74"
+H5,Fins de semana e feriados são mais letais.,parcial,Fim de semana: RR=1.30; Feriado nacional: RR=1.09
+H6,"Tempo ruim (chuva, neblina) eleva a letalidade.",rejeitada (efeito oposto),"Chuva, garoa ou neblina (vs. tempo seco): RR=0.87"
+H7,A causa e o tipo do acidente mudam muito a letalidade.,confirmada,grupo_causa: V=0.178; tipo_acidente: V=0.305
+H8,"Idade dos condutores, idade dos veículos e nº de veículos diferem entre fatais e não fatais.",parcial,veiculos: r=+0.260; idade_media_condutores: r=+0.092; idade_media_veiculos: r=+0.055; pct_condutores_homens: r=+0.089
+H9,Há sazonalidade mensal na letalidade.,"significativa, efeito desprezível",mes: V=0.014

@@ -1,0 +1,11 @@
+hipotese,analise,estrato,n_expostos,taxa_expostos_pct,n_referencia,taxa_referencia_pct,rr,rr_ic_inf,rr_ic_sup
+H1,"Noite/madrugada, controlando o tipo de pista",tipo_pista=Dupla,24046,7.144639,37330,3.107420,2.299219,2.138002,2.472592
+H1,"Noite/madrugada, controlando o tipo de pista",tipo_pista=Múltipla,5536,5.888728,8573,2.461215,2.392610,2.018872,2.835535
+H1,"Noite/madrugada, controlando o tipo de pista",tipo_pista=Simples,29703,12.830354,40154,7.506102,1.709323,1.633520,1.788644
+H1,"Noite/madrugada, controlando trecho urbano/rural",area_urbana=0,34669,12.004961,48297,6.863780,1.749031,1.674594,1.826776
+H1,"Noite/madrugada, controlando trecho urbano/rural",area_urbana=1,24616,6.877641,37760,2.833686,2.427100,2.252081,2.615720
+H2,"Pista simples, controlando trecho urbano/rural",area_urbana=0,47945,11.903222,35021,5.054110,2.355157,2.236907,2.479658
+H2,"Pista simples, controlando trecho urbano/rural",area_urbana=1,21912,5.102227,40464,4.065342,1.255055,1.165337,1.351680
+H4,"Norte/Nordeste, controlando o tipo de pista",tipo_pista=Dupla,14264,5.300056,39277,4.440258,1.193637,1.098381,1.297154
+H4,"Norte/Nordeste, controlando o tipo de pista",tipo_pista=Múltipla,2899,4.346326,10725,3.645688,1.192183,0.979457,1.451110
+H4,"Norte/Nordeste, controlando o tipo de pista",tipo_pista=Simples,23074,14.366820,37930,7.065647,2.033334,1.937628,2.133767

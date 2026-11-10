@@ -1,0 +1,5 @@
+hipotese,analise,fator,estrato,n_estratos,rr_bruto,rr_ajustado_mh,rr_mh_ic_inf,rr_mh_ic_sup,or_mh,qui2_cmh,p_valor,pct_efeito_mantido,p_holm,significativo
+H1,"Noite/madrugada, controlando o tipo de pista",faixa_horaria,tipo_pista,3,1.938200,1.887824,1.818431,1.959865,1.998606,1142.675854,0.000000,96.020466,0.000000,True
+H1,"Noite/madrugada, controlando trecho urbano/rural",faixa_horaria,area_urbana,2,1.938200,1.907439,1.837200,1.980364,2.017390,1176.956266,0.000000,97.582461,0.000000,True
+H2,"Pista simples, controlando trecho urbano/rural",tipo_pista,area_urbana,2,2.159547,1.958016,1.877509,2.041975,2.057973,1039.974259,0.000000,87.275331,0.000000,True
+H4,"Norte/Nordeste, controlando o tipo de pista",regiao,tipo_pista,3,1.904864,1.738664,1.669636,1.810547,1.831222,730.802792,0.000000,85.833020,0.000000,True
