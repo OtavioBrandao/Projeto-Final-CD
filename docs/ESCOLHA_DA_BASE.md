@@ -1,49 +1,112 @@
 # Escolha da base de dados
 
-**Base escolhida:** Diabetes 130-US Hospitals for Years 1999-2008 (UCI ML Repository, id 296).
+**Base escolhida:** Acidentes em rodovias federais do Brasil, **PRF (Polícia Rodoviária Federal), 2024 e 2025**.
 
-## Como a escolhemos
+> Os números abaixo vêm do tratamento de dados (`docs/tabelas/metricas.csv`, gerado por `python -m src.p1_engenharia_dados.executar_pipeline`). A comparação com as alternativas foi medida em 10/11/2026, baixando cada arquivo e perfilando com `pandas`.
 
-Comparamos cinco candidatas contra os 6 critérios do enunciado e contra o que a Pessoa 4 precisa (explicabilidade com SHAP, 3 insights acionáveis e um pitch convincente).
+## 1. A escolha em resumo
 
-| Candidata | Linhas | Alvo / problema | Dá trabalho de preparação? | Acesso | Ponto fraco |
-|---|---|---|---|---|---|
-| **Diabetes 130 Hospitals (UCI)** | 101.766 | Readmissão em < 30 dias (reduzir custo e penalidade) | **Sim:** valores `?`, colunas quase vazias, categorias inconsistentes, pacientes repetidos, códigos CID-9 | Direto, sem login, CC BY 4.0 | Dados de 1999–2008 (EUA) |
-| Olist (Kaggle, e-commerce BR) | ~100 mil pedidos em 9 tabelas | Atraso na entrega → nota baixa | Sim (junção de tabelas) | Exige conta Kaggle; CC BY-NC-SA | Muito usada em trabalhos; alto risco de repetir com outro grupo |
-| Online Shoppers Intention (UCI) | 12.330 | Compra ou não na sessão | Pouca (base bem comportada) | Direto | Pequena e "limpa demais" para o critério 5 |
-| Bank Marketing (UCI) | 45.211 | Cliente assina depósito a prazo | Média | Direto | Clássica de sala de aula; pouco original |
-| Inside Airbnb (Rio de Janeiro) | ~dezenas de milhares | Prever preço/ocupação | Sim (muitos nulos, texto) | Direto, mas muda a cada snapshot | Difícil reproduzir e citar uma versão fixa; alvo menos "decisão" |
+- **Fonte:** [Dados Abertos da PRF](https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf) (base BAT, *Boletim de Acidente de Trânsito*; atualização mensal).
+- **Arquivos usados:** `datatran2024.csv` e `datatran2025.csv` (um acidente por linha) e a versão "agrupada por pessoa" de cada ano (uma pessoa/veículo por linha).
+- **Tamanho:** **145.731 acidentes × 30 colunas** e **391.077 linhas** de pessoas/veículos.
+- **Pergunta de negócio:** *quais combinações de condições (causa, tipo, horário, clima, traçado, trecho, veículos envolvidos) mais elevam o risco de um acidente ser **fatal**, e onde e quando a PRF, as concessionárias ou as seguradoras devem concentrar fiscalização, sinalização e campanhas?*
+- **Alvo:** `acidente_fatal` (1 se houve ao menos uma morte): **7,16%** dos acidentes no bruto (10.435 de 145.731) e **7,05%** na base tratada. Classe desbalanceada: pede F1/AUC, não só acurácia.
+- **Por que vende bem:** é um problema brasileiro e recente, com "cliente" óbvio (PRF, Ministério dos Transportes, concessionárias, seguradoras), decisão concreta (onde reforçar o quê, e quando) e métrica de sucesso clara (queda de acidentes fatais no trecho ou horário atendido).
 
-Fontes consultadas: páginas do UCI (datasets 296 e 468), Fairlearn, OpenML, Kaggle/Olist e Inside Airbnb.
+## 2. Regras do PDF do projeto e checagem
 
-## Checagem dos critérios do enunciado
+Fonte: *Projeto (2026-2).pdf* e *Planejamento - Projeto Final de Ciência de Dados.pdf*.
 
-| # | Critério | Atende? | Evidência |
+### 2.1 Restrições
+
+| Regra | Situação |
+|---|---|
+| Não usar as bases das Listas 1 e 2 (`creditcard.csv`, *Medical Appointment No Shows*) | **OK**, não é nenhuma delas |
+| Não usar *Hotel Booking* | **OK** |
+| Planejamento: "sem usar bases antigas" | **OK**, dados de 2024 e 2025 |
+| Origem clara e referenciada | **OK**, órgão público, página oficial, base BAT |
+| Bases não devem se repetir entre grupos (casos pontuais podem ser discutidos) | **Risco que não conseguimos medir:** acidentes da PRF são um tema conhecido no Brasil, mas os arquivos de 2024 e 2025 são recentes. **Precisamos combinar com os outros grupos** |
+
+### 2.2 Os 6 critérios da base
+
+| # | Critério do PDF | Atende? | Evidência medida |
 |---|---|---|---|
-| 1 | > 5.000 linhas e ≥ 10 colunas úteis | Sim | 101.766 internações; dezenas de variáveis clínicas e de utilização |
-| 2 | Numéricas + categóricas + resultado principal | Sim | Numéricas (`time_in_hospital`, `num_medications`...), categóricas (`age`, `race`, medicamentos, diagnósticos), alvo `readmitted` |
-| 3 | Problema de negócio claro | Sim | Reduzir readmissões em 30 dias (custo e penalidade a hospitais) |
-| 4 | Potencial de modelagem | Sim | Classificação binária desbalanceada: pede F1 e AUC, não só acurácia |
-| 5 | Exige preparação | Sim | `?` como nulo, colunas com muita ausência, `Unknown/Invalid`, óbitos/hospice, encontros repetidos do mesmo paciente, códigos CID-9 de alta cardinalidade |
-| 6 | ≥ 3 insights acionáveis | Sim (a confirmar nos dados) | Hipóteses abaixo |
+| 1 | Preferencialmente > 5.000 linhas e ≥ 10 colunas úteis (sem IDs) | **Sim** | 145.731 linhas; 42 colunas na base de modelagem |
+| 2 | Numéricas e categóricas, resultado principal, exploração estatística e visual | **Sim** | 10 numéricas, 11 categóricas e 20 binárias; alvo `acidente_fatal`; tempo, local, causa, clima, traçado, veículos e pessoas |
+| 3 | Problema de negócio claro | **Sim** | Onde e quando reduzir acidentes fatais (seção 1) |
+| 4 | Potencial para modelagem | **Sim** | Classificação binária desbalanceada; também dá regressão (nº de feridos), agrupamento (perfis de trecho), regras de associação (causa × clima × tipo) e série temporal (acidentes por dia) |
+| 5 | Necessidade de preparação (não pode estar "perfeita") | **Sim** | Seção 4 |
+| 6 | ≥ 3 insights acionáveis | **Provável, a confirmar nos testes da Pessoa 2** | Prévia na seção 5 |
 
-Pontos do enunciado que **não** violamos: não é "Hotel Booking". **A confirmar pela equipe:** que não é a base usada na Lista 2.
+**Ponto de atenção honesto (critérios 2 e 4):** das 13 colunas numéricas do arquivo de acidentes, 7 são **consequência** do acidente (`pessoas`, `mortos`, `feridos_*`, `ilesos`, `ignorados`, `feridos`). Elas definem o alvo e **não podem entrar como atributos** (vazamento). Os preditores numéricos naturais são `km`, `latitude`, `longitude` e `veiculos`; o resto vem de **transformação** (hora, calendário, grupo de causa, traçado em colunas, resumo das pessoas). O modelo pode ter desempenho moderado, e isso também é um resultado válido para discutir.
 
-## Hipóteses iniciais (para a Parte 1 e para a Pessoa 4)
+## 3. Alternativas testadas
 
-1. Pacientes com muitas internações prévias no último ano têm maior risco de voltar em 30 dias → programa de acompanhamento pós-alta para esse grupo.
-2. A alta para determinados destinos (por exemplo, transferência para outra unidade) está associada a mais readmissões → protocolo de alta e transição de cuidado.
-3. Mudança de medicação e medição de HbA1c durante a internação podem estar associadas ao risco → revisar o manejo glicêmico antes da alta.
+| Candidata | Tamanho medido | Recência | Alvo | Preparação | Ponto forte | Ponto fraco |
+|---|---|---|---|---|---|---|
+| **PRF acidentes (escolhida)** | 145.731 × 30 (2024–25) | 2025 completo | Fatal: 7,16% | Moderada | Brasil, "cliente" claro, integra com o arquivo por pessoa | Preditores numéricos naturais escassos; arquivos no Google Drive (download frágil) |
+| NYC *Motor Vehicle Collisions* (NYC Open Data) | 85.559 × 29 (só 2025) | registros até 06/11/2026 | Lesão ou morte: 43,74% (equilibrada) | **Alta**: 369 tipos de veículo, até 99,4% de nulos nos campos de veículos 3 a 5 | Muito recente, API estável, classes equilibradas | EUA; atributos ainda mais "descritivos"; revisões retroativas dos dados |
+| UK STATS19 2024 (*Dept. for Transport*) | 100.927 × 44 (+ tabelas de veículos e vítimas) | 2024 | Gravidade: fatal 1,49% | Média (códigos `-1` para ausente) | Documentação excelente, ano fechado (reprodutível), 3 tabelas para integrar | Reino Unido; poucos fatais |
 
-Todas precisam de teste estatístico antes de virarem afirmação (o enunciado exige).
+## 4. Preparação necessária (critério 5), com evidência
 
-## Riscos e limitações (para falar com honestidade na banca)
+| Problema encontrado | Evidência | Tratamento |
+|---|---|---|
+| Arquivos em `latin1`, separador `;`, vírgula decimal | Latitude como `-23,48586772`; acentos quebram em UTF-8 | Leitura com `encoding="latin1"`, `decimal=","` |
+| Dados de pessoas em outro arquivo | 391.077 linhas de pessoas para 145.731 acidentes (casam 100%) | Integração: resumo por acidente e join pelo `id` |
+| "Não sei" escrito de várias formas | `Ignorado` em 1.933 acidentes (clima), `Não Informado` em 356 (sentido da via), `NA` | Unificar em `Nao_informado` |
+| Valores impossíveis | Idade de até 2024 anos; condutores "com 0 ano"; ano de fabricação 0 | Viram nulo (sem inventar valor) |
+| Contagens que não fecham | 7.672 acidentes (5,28%) com `mortos + feridos + ilesos + ignorados ≠ pessoas` | Sinalizar |
+| Eventos que não são acidentes de trânsito | Suicídio presumido e sinistro pessoal | Remover |
+| Traçado com valores compostos | 898 combinações (ex.: `Reta;Declive`) | Separar em colunas 0/1 |
+| Alta cardinalidade | 1.943 municípios, 69 causas | Agrupar causas; região no lugar de município |
+| Outliers | `veiculos` chega a 82; `km` até 1.470 | Sinalizar (não remover) |
+| Integrações externas | Calendário de feriados e região do IBGE | Novas colunas (`eh_feriado`, `regiao`) |
 
-- Dados de 1999–2008: práticas clínicas mudaram; recomendamos o método, não os números absolutos.
-- Contém `race`, `gender` e `age`: tratar como atributos sensíveis na discussão de ética e viés (não usar para discriminar).
-- Vários encontros por paciente: sem tratamento, o modelo "decora" pacientes e as métricas ficam infladas (vazamento). A Pessoa 1 resolve isso na limpeza.
+**Coisas que verificamos e não eram problema:** as 593 latitudes positivas estão todas em AP e RR (ao norte do Equador, portanto válidas); `id` é único; não há rótulos duplicados por acento ou caixa.
 
-## Referências
+## 5. Prévia dos padrões (descritiva, ainda sem teste de hipótese)
 
-- Strack, B. et al. (2014). *Impact of HbA1c Measurement on Hospital Readmission Rates: Analysis of 70,000 Clinical Database Patient Records.* BioMed Research International. DOI 10.1155/2014/781670.
-- Clore, J., Cios, K., DeShazo, J., Strack, B. (2014). *Diabetes 130-US Hospitals for Years 1999-2008* [Dataset]. UCI ML Repository. DOI 10.24432/C5230J.
+Taxa de acidentes fatais por grupo na base tratada (taxa geral: 7,05%):
+
+| Grupo | Taxa de fatais |
+|---|---|
+| Madrugada / Noite / Manhã | 11,53% / 9,16% / 4,87% |
+| Pista simples / dupla | 9,77% / 4,69% |
+| Com pedestre envolvido | 28,04% |
+| Com caminhão / com bicicleta | 12,28% / 12,43% |
+| Região Norte / Nordeste / Sudeste | 11,24% / 10,23% / 5,50% |
+| Trecho urbano / rural | 4,43% / 9,01% |
+
+Hipóteses para a Pessoa 2 testar (e a Pessoa 4 transformar em insights no formato do PDF: *percebemos que... recomendamos... sustentado por... sucesso medido por... critério objetivo*):
+
+1. **Madrugada, noite e pista simples** concentram mais acidentes fatais → reforçar sinalização, iluminação e fiscalização nesses horários e tipos de pista.
+2. **Pedestres, ciclistas e caminhões** envolvidos elevam muito o risco → ações de travessia e segurança de usuários vulneráveis; atenção a trechos de alto tráfego de carga.
+3. **Norte e Nordeste** têm taxa de fatais cerca do dobro da do Sudeste e do Sul → priorizar recursos por região e por trecho (Alagoas tem 1.337 acidentes na base tratada).
+
+Atenção: causas como álcool (5,18%) e velocidade incompatível (5,28%) têm taxa de fatais **abaixo** da média, embora sejam causas frequentes. Isso precisa ser analisado em volume (quantos acidentes) e em gravidade (que fração é fatal) antes de qualquer recomendação.
+
+## 6. Riscos e limitações (para falar com honestidade na banca)
+
+- Só entram acidentes **registrados** pela PRF em **rodovias federais**; vias urbanas e rodovias estaduais ficam de fora (viés de registro).
+- O alvo é raro e os preditores são limitados; os resultados mostram **associação, não causa**.
+- Causa e tipo do acidente são definidos pela PRF depois do atendimento: servem para explicar o risco e orientar decisões, não para alertar antes do acidente.
+- Os dados são revistos mensalmente: congelamos 2024 e 2025 (anos completos) e citamos a data do download. O ano de 2026 é parcial e ficou de fora.
+- Na versão por pessoa, `sexo` e `idade` são atributos sensíveis: usar para auditar equidade, não para discriminar.
+
+## 7. Descartadas
+
+| Base | Motivo |
+|---|---|
+| *Credit Card Fraud* e *Medical Appointment No Shows* | Usadas nas Listas 1 e 2: proibidas pelo PDF |
+| *Hotel Booking* | Proibida pelo PDF |
+| Olist (2016–2018), Bank Marketing (2008–2010), Online Shoppers (2018) | Antigas; Bank Marketing e Olist são clássicas de sala de aula |
+| IBM Telco Churn | Base fictícia (amostra da IBM), muito usada |
+| KKBox churn | Dados de 2017 |
+
+## 8. Referências
+
+- Polícia Rodoviária Federal. *Dados Abertos da PRF: Acidentes* (BAT). <https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf>
+- NYC Open Data. *Motor Vehicle Collisions - Crashes* (`h9gi-nx95`). <https://data.cityofnewyork.us/resource/h9gi-nx95>
+- UK Department for Transport. *Road Safety Data (STATS19)*. <https://data.dft.gov.uk/road-accidents-safety-data/dft-road-casualty-statistics-collision-2024.csv>
+- Documentos do projeto: *Projeto (2026-2).pdf* e *Planejamento - Projeto Final de Ciência de Dados.pdf*.

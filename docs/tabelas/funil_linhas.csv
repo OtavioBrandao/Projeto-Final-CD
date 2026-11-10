@@ -1,0 +1,4 @@
+etapa,descricao,linhas_antes,removidas,pct_do_bruto_removido,linhas_depois
+Entrada,Base bruta,145731,0,0.0,145731
+D01,Acidentes duplicados,145731,0,0.0,145731
+D02,Suicídio presumido e sinistro pessoal,145731,389,0.267,145342

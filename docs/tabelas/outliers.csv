@@ -1,0 +1,5 @@
+variavel,q1,q3,iqr,limite_inferior,limite_superior,n_outliers,pct_outliers,minimo,maximo,assimetria
+veiculos,1.0,2.0,1.0,-0.5,3.5,10446,7.19,1.0,82.0,5.36
+km,75.2,406.8,331.6,-422.20000000000005,904.2,1568,1.08,0.0,1470.0,1.01
+idade_media_condutores,32.0,48.0,16.0,8.0,72.0,920,0.63,11.0,94.0,0.43
+idade_media_veiculos,6.0,15.0,9.0,-7.5,28.5,2706,1.86,0.0,75.0,1.1

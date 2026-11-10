@@ -1,0 +1,22 @@
+coluna,motivo,detalhe
+id,identificador_ou_tecnica,identificador do acidente; so serve para rastrear linhas
+ano_arquivo,identificador_ou_tecnica,coluna tecnica (de qual arquivo a linha veio)
+data_inversa,substituida,"data em texto; os atributos de calendario resumem -> usar mes, ano, fim_de_semana, eh_feriado"
+horario,substituida,"horario em texto; a hora resume -> usar hora, faixa_horaria"
+causa_acidente,substituida,69 causas; o grupo resume -> usar grupo_causa
+tracado_via,substituida,valores compostos; viraram colunas 0/1 -> usar via_*
+uso_solo,substituida,Sim/Nao; virou coluna 0/1 -> usar area_urbana
+municipio,substituida,"quase 2 mil municipios; uf e regiao ja descrevem o local -> usar uf, regiao"
+trecho,substituida,"alto numero de trechos; use na analise de concentracao -> usar br, km"
+contagens_inconsistentes,substituida,diagnostico das contagens de vitimas (consequencia)
+classificacao_acidente,consequencia,"consequencia do acidente: define o alvo, seria vazamento"
+pessoas,consequencia,"consequencia do acidente: define o alvo, seria vazamento"
+mortos,consequencia,"consequencia do acidente: define o alvo, seria vazamento"
+feridos_leves,consequencia,"consequencia do acidente: define o alvo, seria vazamento"
+feridos_graves,consequencia,"consequencia do acidente: define o alvo, seria vazamento"
+ilesos,consequencia,"consequencia do acidente: define o alvo, seria vazamento"
+ignorados,consequencia,"consequencia do acidente: define o alvo, seria vazamento"
+feridos,consequencia,"consequencia do acidente: define o alvo, seria vazamento"
+regional,administrativa,"coluna administrativa (quem atendeu); redundante com a UF -> usar uf, regiao"
+delegacia,administrativa,"coluna administrativa (quem atendeu); redundante com a UF -> usar uf, regiao"
+uop,administrativa,"coluna administrativa (quem atendeu); redundante com a UF -> usar uf, regiao"

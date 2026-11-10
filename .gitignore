@@ -10,6 +10,9 @@ data/raw/*
 !data/raw/.gitkeep
 !data/raw/LEIA-ME.md
 *.zip
+# Base legível intermediária: grande e regenerável (python -m src.p1_engenharia_dados.executar_pipeline)
+data/interim/*
+!data/interim/.gitkeep
 # SO / editores
 .DS_Store
 Thumbs.db

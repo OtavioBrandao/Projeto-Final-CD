@@ -1,0 +1,7 @@
+momento,classe,n,pct
+antes (bruto),Com Vítimas Feridas,112375,77.11
+antes (bruto),Sem Vítimas,22920,15.73
+antes (bruto),Com Vítimas Fatais,10434,7.16
+antes (bruto),NA,2,0.0
+depois (final),acidente_fatal=0,135102,92.95
+depois (final),acidente_fatal=1,10240,7.05

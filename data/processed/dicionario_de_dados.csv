@@ -1,0 +1,43 @@
+coluna,descricao_negocio,tipo,origem,sensivel,observacao
+dia_semana,Dia da semana do acidente.,categorica,original,nao,Texto como na PRF.
+uf,Estado (UF) onde o acidente ocorreu.,categorica,original,nao,
+br,Rodovia federal onde ocorreu (ex.: BR-116).,categorica,original,nao,"F09. É um código, não uma quantidade."
+km,Quilômetro da rodovia onde ocorreu.,numerica,original,nao,Cauda longa (rodovias longas).
+tipo_acidente,"Tipo do acidente (colisão traseira, saída de pista, atropelamento...).",categorica,original,nao,Só é conhecido após o atendimento.
+fase_dia,"Fase do dia: amanhecer, pleno dia, anoitecer ou plena noite.",categorica,original,nao,
+sentido_via,Sentido da via (crescente ou decrescente).,categorica,original,nao,Nao_informado = PRF não registrou (D04).
+condicao_metereologica,Condição do tempo no momento do acidente.,categorica,original,nao,Nome da coluna mantido como na PRF (com grafia original). Nao_informado = Ignorado (D04).
+tipo_pista,"Tipo da pista: simples, dupla ou múltipla.",categorica,original,nao,
+veiculos,Quantidade de veículos envolvidos.,numerica,original,nao,Cauda longa.
+latitude,Latitude do acidente.,numerica,original,nao,Nula quando impossível (D07).
+longitude,Longitude do acidente.,numerica,original,nao,Nula quando impossível (D07).
+envolve_moto,1 se há motocicleta (ou similar) no acidente.,binaria,derivada,nao,F11. Vem do arquivo por pessoa.
+envolve_caminhao,1 se há caminhão ou caminhão-trator no acidente.,binaria,derivada,nao,F11.
+envolve_onibus,1 se há ônibus ou micro-ônibus no acidente.,binaria,derivada,nao,F11.
+envolve_bicicleta,1 se há bicicleta no acidente.,binaria,derivada,nao,F11.
+envolve_pedestre,1 se há pedestre envolvido.,binaria,derivada,nao,F11.
+idade_media_condutores,"Idade média dos condutores envolvidos, em anos.",numerica,derivada,sim,Sensível. Nula quando não há idade válida (D05); imputar só no Pipeline.
+pct_condutores_homens,Percentual de condutores homens entre os de sexo informado.,numerica,derivada,sim,Sensível. Nula quando o sexo não consta; imputar só no Pipeline.
+idade_media_veiculos,"Idade média dos veículos, em anos (ano do acidente menos ano de fabricação).",numerica,derivada,nao,Nula quando o ano de fabricação é inválido (D06); imputar só no Pipeline.
+hora,Hora do acidente (0 a 23).,numerica,derivada,nao,F02.
+faixa_horaria,"Faixa do dia: Madrugada (0-5h), Manha (6-11h), Tarde (12-17h) ou Noite (18-23h).",categorica,derivada,nao,F02.
+mes,Mês do acidente (1 a 12).,numerica,derivada,nao,F03.
+ano,Ano do acidente (2024 ou 2025).,numerica,derivada,nao,Use para validação temporal; evite como atributo.
+fim_de_semana,1 se o acidente foi em sábado ou domingo.,binaria,derivada,nao,F03.
+eh_feriado,1 se foi em feriado nacional (inclui Carnaval).,binaria,derivada,nao,F04. Calendário integrado (I02).
+regiao,"Região do Brasil (Norte, Nordeste, Centro-Oeste, Sudeste, Sul).",categorica,derivada,nao,F05. Tabela do IBGE (I03).
+grupo_causa,"Grupo da causa do acidente (atenção do condutor, velocidade, álcool, manobra, via...).",categorica,derivada,nao,F06. A causa é definida pela PRF após o atendimento.
+via_reta,1 se o trecho é reta.,binaria,derivada,nao,F07.
+via_curva,1 se o trecho tem curva.,binaria,derivada,nao,F07.
+via_aclive,1 se o trecho tem aclive (subida).,binaria,derivada,nao,F07.
+via_declive,1 se o trecho tem declive (descida).,binaria,derivada,nao,F07.
+via_intersecao,1 se o local é uma interseção de vias.,binaria,derivada,nao,F07.
+via_rotatoria_retorno,1 se o local é rotatória ou retorno regulamentado.,binaria,derivada,nao,F07.
+via_obras_desvio,1 se o trecho está em obras ou tem desvio temporário.,binaria,derivada,nao,F07.
+via_ponte_viaduto_tunel,"1 se o local é ponte, viaduto ou túnel.",binaria,derivada,nao,F07.
+area_urbana,1 se o acidente foi em trecho urbano.,binaria,derivada,nao,F08.
+veiculos_outlier,1 se 'veiculos' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+km_outlier,1 se 'km' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+idade_media_condutores_outlier,1 se 'idade_media_condutores' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+idade_media_veiculos_outlier,1 se 'idade_media_veiculos' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+acidente_fatal,ALVO: 1 se o acidente teve ao menos uma morte; 0 caso contrário.,alvo,derivada,nao,F01. Não use como atributo.

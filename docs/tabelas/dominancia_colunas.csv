@@ -1,0 +1,42 @@
+coluna,valor_dominante,pct_dominancia,n_distintos,quase_constante
+idade_media_condutores_outlier,0,99.367,2,0
+km_outlier,0,98.921,2,0
+idade_media_veiculos_outlier,0,98.138,2,0
+envolve_bicicleta,0,97.592,2,0
+via_obras_desvio,0,97.436,2,0
+via_ponte_viaduto_tunel,0,97.134,2,0
+envolve_onibus,0,97.016,2,0
+eh_feriado,0,96.33,2,0
+envolve_pedestre,0,95.764,2,0
+via_rotatoria_retorno,0,94.858,2,0
+veiculos_outlier,0,92.813,2,0
+via_intersecao,0,92.765,2,0
+via_aclive,0,91.69,2,0
+via_declive,0,89.104,2,0
+via_curva,0,81.618,2,0
+pct_condutores_homens,100.0,79.251,23,0
+envolve_caminhao,0,74.612,2,0
+via_reta,1,72.75,2,0
+fim_de_semana,0,68.151,2,0
+condicao_metereologica,Céu Claro,63.569,10,0
+area_urbana,0,57.083,2,0
+envolve_moto,0,56.031,2,0
+fase_dia,Pleno dia,55.386,4,0
+sentido_via,Crescente,53.532,3,0
+ano,2024,50.23,2,0
+veiculos,2,48.17,24,0
+tipo_pista,Simples,48.064,3,0
+grupo_causa,Atencao_e_reacao_do_condutor,34.152,9,0
+regiao,Sudeste,31.76,5,0
+faixa_horaria,Tarde,30.67,4,0
+tipo_acidente,Colisão traseira,19.485,16,0
+br,BR-101,17.705,118,0
+dia_semana,sábado,15.928,7,0
+uf,MG,12.945,27,0
+mes,12,9.181,12,0
+hora,18,7.483,24,0
+idade_media_condutores,nan,4.822,499,0
+idade_media_veiculos,nan,3.815,654,0
+km,0.0,0.483,8654,0
+latitude,-27.59193546,0.056,102613,0
+longitude,-48.61824557,0.056,102542,0
