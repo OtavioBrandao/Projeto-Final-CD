@@ -1,0 +1,4 @@
+# Mantém fim de linha LF em todos os sistemas (saídas idênticas entre Windows e Linux)
+* text=auto eol=lf
+*.parquet binary
+*.png binary
