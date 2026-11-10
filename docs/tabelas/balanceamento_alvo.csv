@@ -1,0 +1,6 @@
+momento,classe,n,pct
+antes (bruto),No,54864,53.91
+antes (bruto),>30,35545,34.93
+antes (bruto),<30,11357,11.16
+depois (final),readmit_30d=0,63693,91.03
+depois (final),readmit_30d=1,6277,8.97

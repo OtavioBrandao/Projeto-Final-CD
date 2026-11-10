@@ -1,0 +1,25 @@
+coluna,motivo,detalhe
+weight,muito_ausente,"96,86% de nulos (D05)"
+encounter_id,identificador,não descreve o paciente; evitaria 'decorar' linhas
+patient_nbr,identificador,não descreve o paciente; evitaria 'decorar' linhas
+admission_type_id,substituida,código numérico; o nome legível já está na base -> usar tipo_admissao
+admission_source_id,substituida,código numérico; o nome legível já está na base -> usar origem_admissao
+discharge_disposition_id,substituida,código numérico; o grupo legível já está na base -> usar grupo_destino_alta
+destino_alta,substituida,dezenas de níveis; o agrupamento mantém o sentido -> usar grupo_destino_alta
+age,substituida,10 faixas viram um número (ponto médio da faixa) -> usar idade_media
+diag_1,substituida,centenas de códigos CID-9; o grupo clínico resume -> usar grupo_diag_1
+diag_2,substituida,centenas de códigos CID-9; o grupo clínico resume -> usar grupo_diag_2
+diag_3,substituida,centenas de códigos CID-9; o grupo clínico resume -> usar grupo_diag_3
+medical_specialty,substituida,dezenas de níveis raros; mantemos o top-N -> usar especialidade_agrupada
+readmitted,substituida,contém a própria resposta: usar como atributo seria vazamento -> usar readmit_30d
+citoglipton,quase_constante,"valor 'No' em 100,0% das linhas"
+examide,quase_constante,"valor 'No' em 100,0% das linhas"
+glimepiride-pioglitazone,quase_constante,"valor 'No' em 100,0% das linhas"
+acetohexamide,quase_constante,"valor 'No' em 99,999% das linhas"
+metformin-pioglitazone,quase_constante,"valor 'No' em 99,999% das linhas"
+metformin-rosiglitazone,quase_constante,"valor 'No' em 99,997% das linhas"
+troglitazone,quase_constante,"valor 'No' em 99,996% das linhas"
+glipizide-metformin,quase_constante,"valor 'No' em 99,99% das linhas"
+tolbutamide,quase_constante,"valor 'No' em 99,976% das linhas"
+miglitol,quase_constante,"valor 'No' em 99,971% das linhas"
+tolazamide,quase_constante,"valor 'No' em 99,957% das linhas"

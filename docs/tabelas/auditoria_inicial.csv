@@ -1,0 +1,51 @@
+coluna,tipo,n_nulos,pct_nulos,n_interrogacoes_no_arquivo,n_textos_none,n_distintos,exemplo,observacao
+encounter_id,numerica,0,0.0,0,0,101766,2278392,Identificador do encontro (sai da base de modelagem).
+patient_nbr,numerica,0,0.0,0,0,71518,8222157,Identificador do paciente; repete quando há vários encontros (D03).
+race,texto,2273,2.23,2273,0,5,Caucasian,Atributo sensível; '?' vira 'Desconhecido' (D07).
+gender,texto,0,0.0,0,0,3,Female,Contém 'Unknown/Invalid' em poucos registros (D01).
+age,texto,0,0.0,0,0,10,[0-10),
+weight,texto,98569,96.86,98569,0,9,[75-100),Quase toda ausente: imputar seria inventar dado (D05).
+admission_type_id,numerica,0,0.0,0,0,8,6,
+discharge_disposition_id,numerica,0,0.0,0,0,26,25,Contém códigos de óbito/hospice (D02).
+admission_source_id,numerica,0,0.0,0,0,17,1,
+time_in_hospital,numerica,0,0.0,0,0,14,1,
+payer_code,texto,40256,39.56,40256,0,17,MC,"Ausência pode ser informativa, ex.: paciente sem convênio (D06)."
+medical_specialty,texto,49949,49.08,49949,0,72,Pediatrics-Endocrinology,Ausência pode ser informativa (D06); dezenas de níveis raros (F11).
+num_lab_procedures,numerica,0,0.0,0,0,118,41,
+num_procedures,numerica,0,0.0,0,0,7,0,
+num_medications,numerica,0,0.0,0,0,75,1,
+number_outpatient,numerica,0,0.0,0,0,39,0,
+number_emergency,numerica,0,0.0,0,0,33,0,
+number_inpatient,numerica,0,0.0,0,0,21,0,
+diag_1,texto,21,0.02,21,0,716,250.83,Código CID-9; agrupado em F03.
+diag_2,texto,358,0.35,358,0,748,250.01,"Ausência de diagnóstico secundário é real, não erro (D08)."
+diag_3,texto,1423,1.4,1423,0,789,255,"Ausência de diagnóstico secundário é real, não erro (D08)."
+number_diagnoses,numerica,0,0.0,0,0,16,1,
+max_glu_serum,texto,0,0.0,0,96420,4,None,"'None' = exame não realizado, NÃO é nulo (D09)."
+A1Cresult,texto,0,0.0,0,84748,4,None,"'None' = exame não realizado, NÃO é nulo (D09)."
+metformin,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+repaglinide,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+nateglinide,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+chlorpropamide,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+glimepiride,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+acetohexamide,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+glipizide,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+glyburide,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+tolbutamide,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+pioglitazone,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+rosiglitazone,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+acarbose,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+miglitol,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+troglitazone,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+tolazamide,texto,0,0.0,0,0,3,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+examide,texto,0,0.0,0,0,1,No,Constante: não traz informação (candidata a remoção).
+citoglipton,texto,0,0.0,0,0,1,No,Constante: não traz informação (candidata a remoção).
+insulin,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+glyburide-metformin,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+glipizide-metformin,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+glimepiride-pioglitazone,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+metformin-rosiglitazone,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+metformin-pioglitazone,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
+change,texto,0,0.0,0,0,2,No,
+diabetesMed,texto,0,0.0,0,0,2,No,
+readmitted,texto,0,0.0,0,0,3,NO,Alvo original com 3 classes ('NO' em maiúsculas: D04); vira readmit_30d (F01).

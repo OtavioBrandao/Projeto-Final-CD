@@ -1,0 +1,9 @@
+etapa,linhas,colunas
+Bruto,101766,50
+Integração IDS_mapping,101766,53
+Padronização (D04),101766,53
+"Filtros D01, D03, D02",69970,53
+Ausentes (D05-D09),69970,54
+Atributos (F01-F11),69970,69
+Outliers (sinalização),69970,77
+Seleção (base final),69970,54

@@ -1,0 +1,5 @@
+etapa,descricao,linhas_antes,removidas,pct_do_bruto_removido,linhas_depois
+Entrada,Base bruta,101766,0,0.0,101766
+D01,Sexo Unknown/Invalid,101766,3,0.003,101763
+D03,Só o 1º encontro por paciente,101763,30248,29.723,71515
+D02,Óbito/hospice na alta,71515,1545,1.518,69970

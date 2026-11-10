@@ -1,0 +1,10 @@
+coluna,id_decisao,n_nulos_antes,pct_nulos_antes,n_textos_none_antes,decisao,n_nulos_depois
+weight,D05,98569,96.86,0,coluna removida,removida
+medical_specialty,D06,49949,49.08,0,nulo -> 'Desconhecido' + flag medical_specialty_ausente,0
+payer_code,D06,40256,39.56,0,nulo -> 'Desconhecido' + flag payer_code_ausente,0
+race,D07,2273,2.23,0,nulo -> 'Desconhecido',0
+diag_3,D08,1423,1.4,0,nulo -> 'Sem_diagnostico',0
+diag_2,D08,358,0.35,0,nulo -> 'Sem_diagnostico',0
+diag_1,D08,21,0.02,0,nulo -> 'Sem_diagnostico',0
+max_glu_serum,D09,0,0.0,96420,'None' -> 'Nao_medido' (não era nulo),0
+A1Cresult,D09,0,0.0,84748,'None' -> 'Nao_medido' (não era nulo),0
