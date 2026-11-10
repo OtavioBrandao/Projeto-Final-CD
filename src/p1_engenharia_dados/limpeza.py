@@ -1,10 +1,13 @@
-"""Limpeza determinística: inconsistências (D01–D04) e valores ausentes (D05–D09).
+"""Limpeza determinística: inconsistências (D01–D07) e valores ausentes/inválidos.
 
 Todas as funções são **puras**: recebem um DataFrame e devolvem um DataFrame
 novo, sem alterar o original. Elas só aplicam regras fixas, baseadas no
 conhecimento do domínio. Nada aqui é "aprendido" dos dados (nada de média,
 mediana ou modelo para imputar), para não haver vazamento: essas estimativas
 pertencem ao ``Pipeline`` do sklearn da Pessoa 3, depois da divisão treino/teste.
+
+Quando um valor é impossível (idade 2024, ano de fabricação 0) ele vira nulo
+(``NaN``): não inventamos um valor no lugar. O nulo é tratado na modelagem.
 """
 
 from __future__ import annotations
@@ -36,33 +39,32 @@ def colunas_de_texto(df: pd.DataFrame) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# D04 — padronização de texto
+# D04 — rótulos "sem informação"
 # ---------------------------------------------------------------------------
 
 
-def padronizar_texto(df: pd.DataFrame) -> pd.DataFrame:
-    """Padroniza o texto das categorias (decisão D04).
+def padronizar_rotulos(df: pd.DataFrame, colunas: tuple[str, ...] | list[str]) -> pd.DataFrame:
+    """D04 — unifica todas as formas de "não sabemos" em ``Nao_informado``.
 
-    * tira espaços das pontas e colapsa espaços repetidos em todas as colunas
-      de texto (evita que ``"Male "`` e ``"Male"`` virem categorias diferentes);
-    * unifica grafias diferentes da mesma categoria, conforme
-      ``cfg.PADRONIZACAO_CATEGORIAS`` (ex.: ``readmitted`` usa ``NO`` enquanto o
-      resto da base usa ``No``).
-
-    Nulos são preservados.
+    A PRF usa várias palavras para a mesma coisa: ``Ignorado`` (clima),
+    ``Não Informado`` (sentido da via, sexo), ``NA`` e campo vazio. Para o
+    modelo, são todas "sem informação". Também tira espaços das pontas e
+    espaços repetidos.
 
     Args:
-        df: Base com colunas de texto.
+        df: Base com as colunas de texto.
+        colunas: Colunas a padronizar (as que não existirem são ignoradas).
 
     Returns:
-        Cópia do DataFrame com o texto padronizado.
+        Cópia do DataFrame com os rótulos padronizados.
     """
     saida = df.copy()
-    for coluna in colunas_de_texto(saida):
-        saida[coluna] = saida[coluna].str.strip().str.replace(r"\s+", " ", regex=True)
-    for coluna, trocas in cfg.PADRONIZACAO_CATEGORIAS.items():
-        if coluna in saida.columns:
-            saida[coluna] = saida[coluna].replace(trocas)
+    for coluna in colunas:
+        if coluna not in saida.columns:
+            continue
+        texto = saida[coluna].str.strip().str.replace(r"\s+", " ", regex=True)
+        sem_info = texto.isna() | texto.isin(cfg.ROTULOS_SEM_INFORMACAO)
+        saida[coluna] = texto.mask(sem_info, cfg.ROTULO_NAO_INFORMADO)
     return saida
 
 
@@ -85,139 +87,145 @@ def contar_celulas_alteradas(antes: pd.DataFrame, depois: pd.DataFrame) -> int:
 
 
 # ---------------------------------------------------------------------------
-# D01, D02, D03 — filtros de linhas
+# D05, D06 — valores impossíveis nos registros de pessoas
 # ---------------------------------------------------------------------------
 
 
-def remover_genero_invalido(df: pd.DataFrame) -> pd.DataFrame:
-    """D01 — remove registros com ``gender = Unknown/Invalid``.
+def invalidar_idade(pessoas: pd.DataFrame) -> pd.DataFrame:
+    """D05 — idade impossível vira nulo.
 
-    São pouquíssimos registros e não há como recuperar o valor correto. Perder
-    algumas linhas é melhor do que criar uma categoria de gênero artificial.
+    Dois casos:
 
-    Args:
-        df: Base com a coluna ``gender``.
+    * idade fora de [0, 110]: no arquivo há idades como 2024 (provável ano
+      digitado no campo errado);
+    * **condutor** com menos de 10 anos: a PRF usa ``0`` como "não informado" e
+      há milhares de condutores "com 0 anos", que derrubariam a média de idade.
 
-    Returns:
-        DataFrame sem os registros de gênero inválido (índice refeito).
-    """
-    return df.loc[df["gender"] != cfg.GENERO_INVALIDO].reset_index(drop=True)
-
-
-def manter_primeiro_encontro(df: pd.DataFrame) -> pd.DataFrame:
-    """D03 — mantém só o primeiro encontro de cada paciente.
-
-    "Primeiro" = menor ``encounter_id``. Motivos:
-
-    1. **Independência das amostras:** vários encontros do mesmo paciente são
-       parecidos entre si; tratá-los como linhas independentes infla as métricas.
-    2. **Vazamento:** se o mesmo paciente cair no treino e no teste, o modelo
-       "reconhece" o paciente em vez de aprender o padrão.
+    Não dá para saber a idade verdadeira, então o valor é descartado em vez de
+    entrar na média de idade dos condutores.
 
     Args:
-        df: Base com ``patient_nbr`` e ``encounter_id``.
+        pessoas: Base com ``idade`` e ``tipo_envolvido`` (já padronizado em D04).
 
     Returns:
-        Uma linha por paciente, ordenada por ``encounter_id``.
+        Cópia com ``idade`` nula quando impossível.
     """
-    return (
-        df.sort_values("encounter_id", kind="stable")
-        .drop_duplicates(subset="patient_nbr", keep="first")
-        .reset_index(drop=True)
+    saida = pessoas.copy()
+    idade = saida["idade"]
+    fora_do_intervalo = ~idade.between(cfg.IDADE_MINIMA, cfg.IDADE_MAXIMA) & idade.notna()
+    condutor_crianca = (saida["tipo_envolvido"] == "Condutor") & (idade < cfg.IDADE_MINIMA_CONDUTOR)
+    saida["idade"] = idade.mask(fora_do_intervalo | condutor_crianca)
+    return saida
+
+
+def invalidar_ano_fabricacao(pessoas: pd.DataFrame) -> pd.DataFrame:
+    """D06 — ano de fabricação impossível vira nulo.
+
+    Válido: de 1950 até o ano do acidente + 1 (modelo do ano seguinte existe).
+    O valor ``0`` é a forma da PRF dizer "não informado" e distorceria a idade
+    do veículo (viraria "2.025 anos"); ``1900`` aparece como valor padrão.
+
+    Args:
+        pessoas: Base com ``ano_fabricacao_veiculo`` e ``data_inversa`` (``AAAA-MM-DD``).
+
+    Returns:
+        Cópia com o ano nulo quando impossível.
+    """
+    saida = pessoas.copy()
+    ano_acidente = saida["data_inversa"].str[:4].astype(int)
+    ano = saida["ano_fabricacao_veiculo"]
+    invalido = ano.notna() & ((ano < cfg.ANO_FABRICACAO_MINIMO) | (ano > ano_acidente + 1))
+    saida["ano_fabricacao_veiculo"] = ano.mask(invalido)
+    return saida
+
+
+# ---------------------------------------------------------------------------
+# D01, D02 — filtros de linhas (cada um vira uma linha do funil)
+# ---------------------------------------------------------------------------
+
+
+def remover_duplicados(ocorrencias: pd.DataFrame) -> pd.DataFrame:
+    """D01 — remove acidentes idênticos em todos os campos (exceto ``id``).
+
+    Dois registros com data, hora, local, causa, vítimas e demais campos
+    iguais são o mesmo acidente lançado duas vezes; ficamos com o primeiro.
+
+    Args:
+        ocorrencias: Uma linha por acidente.
+
+    Returns:
+        DataFrame sem as duplicatas (índice refeito).
+    """
+    campos = [c for c in ocorrencias.columns if c not in (cfg.COLUNA_ID, "ano_arquivo")]
+    return ocorrencias.drop_duplicates(subset=campos, keep="first").reset_index(drop=True)
+
+
+def remover_eventos_intencionais(ocorrencias: pd.DataFrame) -> pd.DataFrame:
+    """D02 — remove suicídios presumidos e "sinistros pessoais de trânsito".
+
+    São eventos intencionais ou pessoais, não acidentes de trânsito. Mantê-los
+    infla a taxa de acidentes fatais por motivos que nenhuma ação de segurança
+    viária (fiscalização, sinalização, obra) poderia evitar.
+
+    Args:
+        ocorrencias: Base com ``causa_acidente`` e ``tipo_acidente``.
+
+    Returns:
+        DataFrame sem esses eventos (índice refeito).
+    """
+    fora_do_escopo = (ocorrencias["causa_acidente"] == cfg.CAUSA_INTENCIONAL) | (
+        ocorrencias["tipo_acidente"] == cfg.TIPO_PESSOAL
     )
-
-
-def identificar_codigos_obito_hospice(tabela_alta: pd.DataFrame) -> frozenset[int]:
-    """Descobre, no ``IDS_mapping``, os códigos de alta por óbito ou hospice.
-
-    Em vez de confiar só na lista do plano, lemos a descrição original de cada
-    código e procuramos "expired" ou "hospice".
-
-    Args:
-        tabela_alta: Tabela ``discharge_disposition_id`` de
-            ``carregar.carregar_ids_mapping``.
-
-    Returns:
-        Conjunto de códigos de alta que indicam óbito ou hospice.
-    """
-    casam = tabela_alta["descricao_original"].str.contains(
-        cfg.PADRAO_OBITO_HOSPICE, case=False, regex=True
-    )
-    return frozenset(int(c) for c in tabela_alta.loc[casam, "codigo"])
-
-
-def remover_obito_hospice(df: pd.DataFrame, codigos: frozenset[int]) -> pd.DataFrame:
-    """D02 — remove encontros que terminaram em óbito ou hospice.
-
-    Quem faleceu ou foi para cuidados paliativos **não pode ser readmitido**.
-    Mantê-los faria o alvo ``readmit_30d = 0`` por um motivo que não tem a ver
-    com a qualidade do atendimento, enviesando a taxa de readmissão para baixo.
-
-    Args:
-        df: Base com ``discharge_disposition_id``.
-        codigos: Códigos de alta a remover.
-
-    Returns:
-        DataFrame sem esses encontros (índice refeito).
-    """
-    return df.loc[~df["discharge_disposition_id"].isin(codigos)].reset_index(drop=True)
+    return ocorrencias.loc[~fora_do_escopo].reset_index(drop=True)
 
 
 # ---------------------------------------------------------------------------
-# D05–D09 — valores ausentes
+# D03, D07 — inconsistências nas ocorrências
 # ---------------------------------------------------------------------------
 
 
-def tratar_ausentes(df: pd.DataFrame) -> pd.DataFrame:
-    """Aplica as decisões D05–D09 sobre valores ausentes.
+def sinalizar_contagens_inconsistentes(ocorrencias: pd.DataFrame) -> pd.DataFrame:
+    """D03 — marca acidentes em que as contagens de vítimas não fecham.
 
-    =====  ==========================  =====================================
-    ID     Coluna                      Decisão
-    =====  ==========================  =====================================
-    D05    ``weight``                  removida (quase toda ausente)
-    D06    ``payer_code``,             nulo -> ``Desconhecido`` + coluna
-           ``medical_specialty``       ``*_ausente`` (0/1)
-    D07    ``race``                    nulo -> ``Desconhecido``
-    D08    ``diag_1/2/3``              nulo -> ``Sem_diagnostico``
-    D09    ``max_glu_serum``,          ``None`` -> ``Nao_medido``
-           ``A1Cresult``               (não era nulo: exame não feito)
-    =====  ==========================  =====================================
-
-    Nenhuma imputação estatística é feita aqui.
+    Regra: ``mortos + feridos_leves + feridos_graves + ilesos + ignorados`` deve
+    ser igual a ``pessoas``. Não removemos nem corrigimos (não sabemos qual
+    campo está errado); só sinalizamos. O alvo usa apenas ``mortos``.
 
     Args:
-        df: Base com nulos reais (``NaN``) nas colunas acima.
+        ocorrencias: Base com as colunas de contagem.
 
     Returns:
-        Cópia do DataFrame tratada.
+        Cópia com ``contagens_inconsistentes`` (0/1).
     """
-    saida = df.copy()
+    saida = ocorrencias.copy()
+    soma = saida[["mortos", "feridos_leves", "feridos_graves", "ilesos", "ignorados"]].sum(axis=1)
+    saida["contagens_inconsistentes"] = (soma != saida["pessoas"]).astype("int8")
+    return saida
 
-    # D05 — weight: 96,9% ausente. Preencher seria inventar o peso de quase todos.
-    saida = saida.drop(columns=["weight"])
 
-    # D06 — a falta de convênio/especialidade pode ter relação com o desfecho
-    # (ex.: paciente sem plano de saúde). Guardamos a informação "estava ausente"
-    # numa coluna própria ANTES de preencher o texto.
-    for coluna in ("payer_code", "medical_specialty"):
-        saida[f"{coluna}_ausente"] = saida[coluna].isna().astype("int8")
-        saida[coluna] = saida[coluna].fillna(cfg.ROTULO_DESCONHECIDO)
+def invalidar_coordenadas(ocorrencias: pd.DataFrame) -> pd.DataFrame:
+    """D07 — coordenada fora do Brasil vira nula (latitude e longitude juntas).
 
-    # D07 — race: só ~2% ausente. Categoria própria evita perder linhas.
-    # Atributo sensível: a categoria "Desconhecido" NÃO deve ser usada para
-    # discriminar ninguém (ver seção de ética na documentação).
-    saida["race"] = saida["race"].fillna(cfg.ROTULO_DESCONHECIDO)
+    Fora do Brasil = fora da caixa de ``cfg.LATITUDE_*``/``cfg.LONGITUDE_*`` ou
+    latitude positiva em UF que não fica ao norte do Equador. Latitude
+    positiva em AP e RR é **correta** (ficam ao norte) e não é tocada.
 
-    # D08 — um paciente pode simplesmente não ter 2º ou 3º diagnóstico.
-    # A ausência é um fato clínico, não um erro de coleta.
-    for coluna in cfg.COLUNAS_DIAGNOSTICO:
-        saida[coluna] = saida[coluna].fillna(cfg.ROTULO_SEM_DIAGNOSTICO)
+    Args:
+        ocorrencias: Base com ``latitude``, ``longitude`` e ``uf``.
 
-    # D09 — "None" aqui significa "exame não realizado". Renomear deixa claro
-    # que é uma categoria real (e evita confusão com nulo).
-    for coluna in ("max_glu_serum", "A1Cresult"):
-        saida[coluna] = saida[coluna].replace({"None": cfg.ROTULO_NAO_MEDIDO})
-
+    Returns:
+        Cópia com as coordenadas nulas quando implausíveis.
+    """
+    saida = ocorrencias.copy()
+    lat, lon = saida["latitude"], saida["longitude"]
+    fora_da_caixa = (
+        (lat < cfg.LATITUDE_MINIMA) | (lat > cfg.LATITUDE_MAXIMA)
+        | (lon < cfg.LONGITUDE_MINIMA) | (lon > cfg.LONGITUDE_MAXIMA)
+    )  # fmt: skip
+    norte_errado = (lat > 0) & ~saida["uf"].isin(cfg.UFS_NORTE_DO_EQUADOR)
+    invalida = fora_da_caixa | norte_errado
+    saida["latitude"] = lat.mask(invalida)
+    saida["longitude"] = lon.mask(invalida)
     return saida
 
 
@@ -232,3 +240,18 @@ def nulos_restantes(df: pd.DataFrame) -> pd.Series:
     """
     contagem = df.isna().sum()
     return contagem[contagem > 0]
+
+
+def contar_coordenadas_positivas_validas(ocorrencias: pd.DataFrame) -> int:
+    """Conta latitudes positivas que são **legítimas** (UF ao norte do Equador).
+
+    Serve de evidência de que latitude ≥ 0 não é erro por si só.
+
+    Args:
+        ocorrencias: Base com ``latitude`` e ``uf``.
+
+    Returns:
+        Número de acidentes com latitude positiva em AP, RR, AM ou PA.
+    """
+    return int(((ocorrencias["latitude"] > 0) & ocorrencias["uf"].isin(cfg.UFS_NORTE_DO_EQUADOR)).sum())
+

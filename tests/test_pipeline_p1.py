@@ -1,9 +1,9 @@
-"""Testes do pipeline da Pessoa 1 (``pytest``).
+"""Testes do tratamento de dados da PRF (``pytest``).
 
-Verificam as regras do plano (seção 5): sem ``?``, filtros D01–D03, alvo
-correto, dicionário igual à base, funil de linhas fechando, reprodutibilidade
-(mesmo hash ao rodar duas vezes) e que todo número do ``docs/README.md`` vem das
-tabelas de ``docs/tabelas``.
+Verificam as regras do plano: rótulos "não sei" unificados, filtros D01 e D02,
+alvo correto e sem vazamento, valores impossíveis anulados, dicionário igual à
+base, funil de linhas fechando, reprodutibilidade (mesmo hash ao rodar duas
+vezes) e que todo número do ``docs/README.md`` vem das tabelas de ``docs/tabelas``.
 
 Os testes rodam o pipeline em **pastas temporárias**, sem tocar nos arquivos
 versionados. Precisam de ``data/raw`` (``python -m src.p1_engenharia_dados.baixar_base``).
@@ -14,22 +14,27 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
 import pytest
 
-from src.p1_engenharia_dados import carregar, configuracao as cfg, engenharia_atributos, executar_pipeline
+from src.p1_engenharia_dados import carregar, engenharia_atributos, executar_pipeline, limpeza
+from src.p1_engenharia_dados import configuracao as cfg
 from src.p1_engenharia_dados.configuracao import Caminhos
 from src.p1_engenharia_dados.relatorios import fmt_int, fmt_num
 
 RAIZ = Path(__file__).resolve().parents[1]
-CSV_BRUTO = RAIZ / "data" / "raw" / "diabetic_data.csv"
+CAMINHOS_REAIS = Caminhos(raiz=RAIZ)
 
 pytestmark = pytest.mark.skipif(
-    not CSV_BRUTO.exists(),
+    not all(CAMINHOS_REAIS.csv_ocorrencias(a).exists() for a in cfg.ANOS),
     reason="dados brutos ausentes: rode python -m src.p1_engenharia_dados.baixar_base",
 )
+
+#: Colunas de texto onde os rótulos "não sei" devem ter sido unificados (D04).
+ROTULOS_PROIBIDOS = {"Ignorado", "Não Informado", "NA"}
 
 
 def _sha256(caminho: Path) -> str:
@@ -73,13 +78,14 @@ def _executar(pasta: Path, documentacao: bool) -> Execucao:
     Returns:
         Objeto com as saídas já carregadas.
     """
-    caminhos = Caminhos(raiz=pasta, raw=RAIZ / "data" / "raw")
+    caminhos = Caminhos(raiz=pasta, raw=CAMINHOS_REAIS.pasta_raw)
     metricas = executar_pipeline.executar(caminhos, gerar_documentacao=documentacao)
+    ler = lambda c: pd.read_csv(c, keep_default_na=False, na_values=[""], low_memory=False)  # noqa: E731
     return Execucao(
         caminhos=caminhos,
         metricas=metricas,
-        limpo=pd.read_csv(caminhos.csv_limpo, keep_default_na=False, na_values=[""]),
-        modelagem=pd.read_csv(caminhos.csv_modelagem, keep_default_na=False, na_values=[""]),
+        limpo=ler(caminhos.csv_limpo),
+        modelagem=ler(caminhos.csv_modelagem),
         dicionario=pd.read_csv(caminhos.csv_dicionario, keep_default_na=False),
     )
 
@@ -98,8 +104,8 @@ def exec_b(tmp_path_factory: pytest.TempPathFactory) -> Execucao:
 
 @pytest.fixture(scope="module")
 def bruto() -> pd.DataFrame:
-    """Base bruta lida com a regra correta de nulos."""
-    return carregar.carregar_dados_brutos(CSV_BRUTO)
+    """Ocorrências brutas lidas com a regra correta de nulos."""
+    return carregar.carregar_ocorrencias(CAMINHOS_REAIS)
 
 
 # ---------------------------------------------------------------------------
@@ -107,108 +113,237 @@ def bruto() -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 
-def test_bruto_tem_101766_linhas(bruto: pd.DataFrame) -> None:
-    """A base baixada tem o tamanho documentado no UCI."""
-    assert len(bruto) == 101_766
+def test_bruto_tem_o_tamanho_documentado(bruto: pd.DataFrame) -> None:
+    """Os dois anos de ocorrências somam 145.731 acidentes, com ``id`` único."""
+    assert len(bruto) == 73_202 + 72_529
+    assert bruto["id"].is_unique
 
 
-def test_none_dos_exames_nao_vira_nulo(bruto: pd.DataFrame) -> None:
-    """``None`` em max_glu_serum/A1Cresult é 'exame não feito', não nulo (D09)."""
-    assert bruto["max_glu_serum"].isna().sum() == 0
-    assert (bruto["max_glu_serum"] == "None").sum() > 90_000
-    assert bruto["A1Cresult"].isna().sum() == 0
+def test_leitura_usa_latin1_e_virgula_decimal(bruto: pd.DataFrame) -> None:
+    """Acentos saem corretos e latitude/km são numéricos (vírgula decimal)."""
+    assert "Céu Claro" in set(bruto["condicao_metereologica"])
+    assert pd.api.types.is_float_dtype(bruto["latitude"])
+    assert pd.api.types.is_float_dtype(bruto["km"])
 
 
-def test_ids_mapping_tem_tres_tabelas_e_codigos_de_obito() -> None:
-    """O IDS_mapping é lido como 3 tabelas e os códigos de óbito/hospice conferem com o plano."""
-    from src.p1_engenharia_dados import limpeza
+def test_na_do_arquivo_vira_nulo_e_ignorado_continua_texto(bruto: pd.DataFrame) -> None:
+    """Só ``NA`` e vazio viram nulo; ``Ignorado`` continua texto até a etapa D04."""
+    assert bruto["classificacao_acidente"].isna().sum() == 2
+    assert (bruto["condicao_metereologica"] == "Ignorado").sum() > 1_000
 
-    mapas = carregar.carregar_ids_mapping(RAIZ / "data" / "raw" / "IDS_mapping.csv")
-    assert set(mapas) == set(carregar.MAPEAMENTOS)
-    codigos = limpeza.identificar_codigos_obito_hospice(mapas["discharge_disposition_id"])
-    assert codigos == cfg.CODIGOS_ALTA_OBITO_HOSPICE_PLANO
-    # NULL / Not Available / Not Mapped viram uma única categoria (D04).
-    descricoes = set(mapas["admission_type_id"]["descricao"])
-    assert cfg.ROTULO_NAO_INFORMADO in descricoes
-    assert not descricoes & {"NULL", "Not Available", "Not Mapped"}
+
+def test_pessoas_casam_com_ocorrencias(bruto: pd.DataFrame) -> None:
+    """Todo acidente tem pessoas e toda pessoa tem acidente (join 100%)."""
+    pessoas = carregar.carregar_pessoas(CAMINHOS_REAIS)
+    assert len(pessoas) == 196_448 + 194_629
+    assert set(pessoas["id"]) == set(bruto["id"])
 
 
 # ---------------------------------------------------------------------------
-# Regras de limpeza (plano, seção 5)
+# Regras de limpeza (testes pequenos, sem rodar o pipeline)
 # ---------------------------------------------------------------------------
 
 
-def test_nenhum_interrogacao_restante(exec_a: Execucao) -> None:
-    """Nenhum ``?`` sobra em nenhuma das bases."""
+def test_padronizar_rotulos_unifica_nao_sei() -> None:
+    """D04: Ignorado, Não Informado e nulo viram ``Nao_informado``."""
+    df = pd.DataFrame({"sexo": ["Masculino", "Ignorado", "Não Informado", None, " Feminino "]})
+    saida = limpeza.padronizar_rotulos(df, ["sexo"])
+    assert saida["sexo"].tolist() == ["Masculino", "Nao_informado", "Nao_informado", "Nao_informado", "Feminino"]
+
+
+def test_invalidar_idade() -> None:
+    """D05: idade > 110 e condutor com menos de 10 anos viram nulo; passageiro de 0 ano fica."""
+    df = pd.DataFrame(
+        {
+            "idade": [30.0, 2024.0, 0.0, 0.0, 111.0, 9.0],
+            "tipo_envolvido": ["Condutor", "Condutor", "Condutor", "Passageiro", "Passageiro", "Condutor"],
+        }
+    )
+    saida = limpeza.invalidar_idade(df)
+    assert saida["idade"].isna().tolist() == [False, True, True, False, True, True]
+
+
+def test_invalidar_ano_fabricacao() -> None:
+    """D06: ano 0, 1900 e futuro viram nulo; 1950 e o ano seguinte ao acidente são válidos."""
+    df = pd.DataFrame(
+        {
+            "ano_fabricacao_veiculo": [0.0, 1900.0, 1950.0, 2010.0, 2026.0, 2027.0],
+            "data_inversa": ["2025-03-01"] * 6,
+        }
+    )
+    saida = limpeza.invalidar_ano_fabricacao(df)
+    assert saida["ano_fabricacao_veiculo"].isna().tolist() == [True, True, False, False, False, True]
+
+
+def test_invalidar_coordenadas_respeita_norte_do_equador() -> None:
+    """D07: latitude positiva vale em AP/RR; fora do Brasil ou positiva em SP vira nulo."""
+    df = pd.DataFrame(
+        {
+            "uf": ["AP", "RR", "SP", "SP", "MT"],
+            "latitude": [0.5, 2.8, 10.0, -23.0, -50.0],
+            "longitude": [-51.0, -60.0, -46.0, -46.0, -55.0],
+        }
+    )
+    saida = limpeza.invalidar_coordenadas(df)
+    assert saida["latitude"].isna().tolist() == [False, False, True, False, True]
+    assert saida["longitude"].isna().tolist() == [False, False, True, False, True]
+
+
+def test_remover_eventos_intencionais() -> None:
+    """D02: suicídio presumido e sinistro pessoal saem; o resto fica."""
+    df = pd.DataFrame(
+        {
+            "causa_acidente": ["Chuva", cfg.CAUSA_INTENCIONAL, "Chuva"],
+            "tipo_acidente": ["Tombamento", "Tombamento", cfg.TIPO_PESSOAL],
+        }
+    )
+    assert len(limpeza.remover_eventos_intencionais(df)) == 1
+
+
+# ---------------------------------------------------------------------------
+# Atributos (testes pequenos)
+# ---------------------------------------------------------------------------
+
+
+def test_feriados_nacionais_conhecidos() -> None:
+    """F04: fixos, Carnaval, Sexta-feira Santa, Corpus Christi e Consciência Negra (2024+)."""
+    feriados = engenharia_atributos.feriados_nacionais([2024, 2025])
+    esperados = {
+        date(2024, 1, 1), date(2024, 2, 12), date(2024, 2, 13), date(2024, 3, 29),
+        date(2024, 5, 30), date(2024, 11, 20), date(2025, 3, 3), date(2025, 3, 4),
+        date(2025, 4, 18), date(2025, 6, 19), date(2025, 11, 20), date(2025, 12, 25),
+    }  # fmt: skip
+    assert esperados <= feriados
+    assert date(2024, 7, 10) not in feriados
+
+
+def test_faixas_do_dia() -> None:
+    """F02: limites das faixas horárias."""
+    nomes = [engenharia_atributos._nome_da_faixa(h) for h in (0, 5, 6, 11, 12, 17, 18, 23)]
+    assert nomes == ["Madrugada", "Madrugada", "Manha", "Manha", "Tarde", "Tarde", "Noite", "Noite"]
+
+
+def test_flags_de_tracado() -> None:
+    """F07: valores compostos viram colunas 0/1."""
+    df = pd.DataFrame({"tracado_via": ["Reta;Declive", "Curva", "Interseção de Vias;Ponte", "Rotatória"]})
+    saida = engenharia_atributos.criar_flags_tracado(df)
+    assert saida["via_reta"].tolist() == [1, 0, 0, 0]
+    assert saida["via_declive"].tolist() == [1, 0, 0, 0]
+    assert saida["via_curva"].tolist() == [0, 1, 0, 0]
+    assert saida["via_ponte_viaduto_tunel"].tolist() == [0, 0, 1, 0]
+    assert saida["via_rotatoria_retorno"].tolist() == [0, 0, 0, 1]
+
+
+def test_resumir_pessoas_em_exemplo_pequeno() -> None:
+    """F11: dois acidentes com moto, pedestre, idades e sexo conhecidos."""
+    pessoas = pd.DataFrame(
+        {
+            "id": [1, 1, 1, 2, 2],
+            "id_veiculo": [10.0, 10.0, 11.0, 20.0, None],
+            "tipo_veiculo": ["Motocicleta", "Motocicleta", "Caminhão", "Automóvel", "Nao_informado"],
+            "tipo_envolvido": ["Condutor", "Passageiro", "Condutor", "Condutor", "Pedestre"],
+            "idade": [30.0, 10.0, 50.0, None, 40.0],
+            "sexo": ["Masculino", "Feminino", "Feminino", "Masculino", "Feminino"],
+            "ano_fabricacao_veiculo": [2020.0, 2020.0, 2010.0, None, None],
+            "data_inversa": ["2024-05-01"] * 5,
+        }
+    )
+    r = engenharia_atributos.resumir_pessoas(pessoas).set_index("id")
+    assert r.loc[1, "envolve_moto"] == 1 and r.loc[1, "envolve_caminhao"] == 1 and r.loc[1, "envolve_pedestre"] == 0
+    assert r.loc[2, "envolve_pedestre"] == 1 and r.loc[2, "envolve_moto"] == 0
+    assert r.loc[1, "idade_media_condutores"] == 40.0  # (30 + 50) / 2; o passageiro não conta
+    assert pd.isna(r.loc[2, "idade_media_condutores"])  # único condutor sem idade válida
+    assert r.loc[1, "pct_condutores_homens"] == 50.0
+    assert r.loc[1, "idade_media_veiculos"] == 9.0  # veículos de 4 e 14 anos, contados uma vez cada
+
+
+def test_todas_as_causas_da_base_tem_grupo(bruto: pd.DataFrame) -> None:
+    """F06: nenhuma causa que chega à etapa de atributos cai em ``Outras``.
+
+    A causa intencional (suicídio presumido) já saiu em D02, por isso não entra aqui.
+    """
+    restantes = bruto.loc[bruto["causa_acidente"] != cfg.CAUSA_INTENCIONAL, ["causa_acidente"]]
+    saida = engenharia_atributos.agrupar_causas(restantes)
+    assert (saida["grupo_causa"] != cfg.ROTULO_OUTRAS).all()
+
+
+# ---------------------------------------------------------------------------
+# Pipeline completo
+# ---------------------------------------------------------------------------
+
+
+def test_rotulos_nao_sei_unificados(exec_a: Execucao) -> None:
+    """D04: nenhum ``Ignorado``/``Não Informado``/``NA`` sobra nas bases."""
     for base in (exec_a.limpo, exec_a.modelagem):
         texto = base.select_dtypes(exclude="number")
-        assert not (texto == "?").any().any()
+        assert not texto.isin(ROTULOS_PROIBIDOS).any().any()
 
 
-def test_sem_nulos_onde_a_regra_manda_preencher(exec_a: Execucao) -> None:
-    """Colunas D06–D09 não têm nulos; weight foi removida (D05)."""
-    regras = ["payer_code", "medical_specialty", "race", "diag_1", "diag_2", "diag_3",
-              "max_glu_serum", "A1Cresult"]  # fmt: skip
-    assert exec_a.limpo[regras].isna().sum().sum() == 0
-    assert "weight" not in exec_a.limpo.columns
-    assert exec_a.modelagem.isna().sum().sum() == 0
+def test_d02_sem_eventos_intencionais(exec_a: Execucao) -> None:
+    """D02: nenhum suicídio presumido nem sinistro pessoal no interim."""
+    assert not (exec_a.limpo["causa_acidente"] == cfg.CAUSA_INTENCIONAL).any()
+    assert not (exec_a.limpo["tipo_acidente"] == cfg.TIPO_PESSOAL).any()
 
 
-def test_d01_sem_genero_invalido(exec_a: Execucao) -> None:
-    """D01: nenhum ``Unknown/Invalid`` em gender."""
-    assert not (exec_a.limpo["gender"] == cfg.GENERO_INVALIDO).any()
-
-
-def test_d02_sem_obito_hospice(exec_a: Execucao) -> None:
-    """D02: nenhum código de alta de óbito/hospice."""
-    assert not exec_a.limpo["discharge_disposition_id"].isin(cfg.CODIGOS_ALTA_OBITO_HOSPICE_PLANO).any()
-
-
-def test_d03_paciente_unico(exec_a: Execucao) -> None:
-    """D03: ``patient_nbr`` único na saída."""
-    assert exec_a.limpo["patient_nbr"].is_unique
+def test_id_unico_e_anos(exec_a: Execucao) -> None:
+    """``id`` único no interim; só 2024 e 2025."""
+    assert exec_a.limpo["id"].is_unique
+    assert set(exec_a.modelagem["ano"].unique()) == {2024, 2025}
 
 
 def test_alvo_binario_e_proporcao_bate_com_o_bruto(exec_a: Execucao, bruto: pd.DataFrame) -> None:
-    """``readmit_30d`` é 0/1 e a proporção de 1 bate com o cálculo direto no CSV bruto."""
+    """``acidente_fatal`` é 0/1 e bate com o cálculo direto (mortos > 0) no bruto filtrado."""
     alvo = exec_a.modelagem[cfg.COLUNA_ALVO]
     assert set(alvo.unique()) == {0, 1}
-
-    # Recalcula "na mão", só com pandas, aplicando as mesmas regras ao bruto.
-    ref = bruto[bruto["gender"] != "Unknown/Invalid"]
-    ref = ref.sort_values("encounter_id").drop_duplicates("patient_nbr", keep="first")
-    ref = ref[~ref["discharge_disposition_id"].isin({11, 13, 14, 19, 20, 21})]
+    # Recalcula "na mão", só com pandas, aplicando a regra D02 ao bruto.
+    ref = bruto[(bruto["causa_acidente"] != "Suicídio (presumido)") & (bruto["tipo_acidente"] != "Sinistro pessoal de trânsito")]
     assert len(ref) == len(exec_a.modelagem)
-    assert (ref["readmitted"] == "<30").mean() == pytest.approx(alvo.mean(), abs=1e-12)
-    assert int((ref["readmitted"] == "<30").sum()) == int(alvo.sum())
+    assert (ref["mortos"] > 0).mean() == pytest.approx(alvo.mean(), abs=1e-12)
+    assert int((ref["mortos"] > 0).sum()) == int(alvo.sum())
 
 
-def test_sem_vazamento_de_alvo_e_ids(exec_a: Execucao) -> None:
-    """A base de modelagem não tem ``readmitted``, IDs e o alvo é a última coluna."""
+def test_sem_vazamento_de_alvo(exec_a: Execucao) -> None:
+    """A base de modelagem não tem consequências, ``id``, e o alvo é a última coluna."""
     colunas = list(exec_a.modelagem.columns)
-    for proibida in ("readmitted", "encounter_id", "patient_nbr"):
-        assert proibida not in colunas
+    for proibida in (*cfg.COLUNAS_RESULTADO, "id", *cfg.COLUNAS_ADMINISTRATIVAS):
+        assert proibida not in colunas, proibida
     assert colunas[-1] == cfg.COLUNA_ALVO
     # O interim guarda tudo para rastreio.
-    assert {"readmitted", "encounter_id", "patient_nbr"} <= set(exec_a.limpo.columns)
+    assert set(cfg.COLUNAS_RESULTADO) <= set(exec_a.limpo.columns)
 
 
-def test_nao_escalonou_nem_fez_onehot(exec_a: Execucao, bruto: pd.DataFrame) -> None:
-    """Valores numéricos originais intactos e categorias ainda em texto (isso é da Pessoa 3)."""
+def test_nulos_so_onde_documentado(exec_a: Execucao) -> None:
+    """Só as 3 colunas de resumo de pessoas têm nulo (imputação é da Pessoa 3)."""
+    nulos = set(exec_a.modelagem.columns[exec_a.modelagem.isna().any()])
+    assert nulos == {"idade_media_condutores", "pct_condutores_homens", "idade_media_veiculos"}
+
+
+def test_valores_plausiveis(exec_a: Execucao) -> None:
+    """Idades e coordenadas dentro dos limites; hora de 0 a 23; rodovia como texto."""
     m = exec_a.modelagem
-    assert m["time_in_hospital"].between(1, 14).all()
-    assert pd.api.types.is_integer_dtype(m["time_in_hospital"])
-    assert not pd.api.types.is_numeric_dtype(m["race"])
-    # Nenhuma coluna one-hot (nome com "_" + categoria) foi criada.
-    assert not any(c.startswith(("race_", "gender_")) for c in m.columns)
+    assert m["idade_media_condutores"].dropna().between(cfg.IDADE_MINIMA_CONDUTOR, cfg.IDADE_MAXIMA).all()
+    assert m["idade_media_veiculos"].dropna().between(0, 75).all()
+    assert m["latitude"].dropna().between(cfg.LATITUDE_MINIMA, cfg.LATITUDE_MAXIMA).all()
+    assert m["longitude"].dropna().between(cfg.LONGITUDE_MINIMA, cfg.LONGITUDE_MAXIMA).all()
+    assert m["hora"].between(0, 23).all()
+    assert m["br"].str.startswith("BR-").all()
+
+
+def test_nao_escalonou_nem_fez_onehot(exec_a: Execucao) -> None:
+    """Valores originais intactos e categorias ainda em texto (isso é da Pessoa 3)."""
+    m = exec_a.modelagem
+    assert pd.api.types.is_integer_dtype(m["veiculos"]) and m["veiculos"].min() >= 1
+    assert not pd.api.types.is_numeric_dtype(m["uf"])
+    assert not any(c.startswith(("uf_", "regiao_")) for c in m.columns)
 
 
 def test_outliers_so_sinalizados_valores_intactos(exec_a: Execucao, bruto: pd.DataFrame) -> None:
-    """As colunas de contagem têm exatamente os valores do bruto; só ganham ``*_outlier``."""
-    original = bruto.set_index("encounter_id")
-    limpo = exec_a.limpo.set_index("encounter_id")
-    for coluna in cfg.COLUNAS_OUTLIER:
+    """``km`` e ``veiculos`` têm exatamente os valores do bruto; só ganham ``*_outlier``."""
+    original = bruto.set_index("id")
+    limpo = exec_a.limpo.set_index("id")
+    for coluna in ("km", "veiculos"):
         assert (limpo[coluna] == original.loc[limpo.index, coluna]).all()
+    for coluna in cfg.COLUNAS_OUTLIER:
         assert set(limpo[f"{coluna}_outlier"].unique()) <= {0, 1}
 
 
@@ -223,7 +358,7 @@ def test_dicionario_igual_as_colunas_da_modelagem(exec_a: Execucao) -> None:
     assert (exec_a.dicionario["descricao_negocio"].str.len() > 10).all()
     assert set(exec_a.dicionario["tipo"]) <= {"numerica", "categorica", "binaria", "alvo"}
     sensiveis = set(exec_a.dicionario.loc[exec_a.dicionario["sensivel"] == "sim", "coluna"])
-    assert {"race", "gender"} <= sensiveis
+    assert sensiveis == {"idade_media_condutores", "pct_condutores_homens"}
 
 
 def test_parquet_igual_ao_csv(exec_a: Execucao) -> None:
@@ -240,7 +375,6 @@ def test_funil_fecha(exec_a: Execucao) -> None:
     entrada = int(funil["linhas_antes"].iloc[0])
     saida = int(funil["linhas_depois"].iloc[-1])
     assert entrada - int(funil["removidas"].sum()) == saida == len(exec_a.modelagem)
-    # Cada etapa encadeia na seguinte.
     assert (funil["linhas_antes"] - funil["removidas"] == funil["linhas_depois"]).all()
     assert (funil["linhas_depois"].iloc[:-1].to_numpy() == funil["linhas_antes"].iloc[1:].to_numpy()).all()
 
@@ -252,24 +386,12 @@ def test_reprodutivel_mesmo_hash_duas_execucoes(exec_a: Execucao, exec_b: Execuc
         assert _sha256(a) == _sha256(b), f"{nome} difere entre as execuções"
 
 
-def test_agrupamento_cid9() -> None:
-    """Exemplos conhecidos do agrupamento CID-9 (F03)."""
-    codigos = pd.Series(["250.83", "250", "428", "414", "786", "788", "715", "800", "150",
-                         "V57", "E909", "585", "530.81", "Sem_diagnostico", None])  # fmt: skip
-    grupos = engenharia_atributos.agrupar_cid9(codigos).tolist()
-    assert grupos == [
-        "Diabetes", "Diabetes", "Circulatorio", "Circulatorio", "Respiratorio", "Geniturinario",
-        "Musculoesqueletico", "Lesoes", "Neoplasias", "Outros", "Outros", "Geniturinario",
-        "Digestivo", "Sem_diagnostico", "Sem_diagnostico",
-    ]  # fmt: skip
-
-
 # ---------------------------------------------------------------------------
 # Documentação: todo número vem das tabelas
 # ---------------------------------------------------------------------------
 
-#: Números que fazem parte do texto fixo (não são resultado de cálculo).
-NUMEROS_LIVRES = {"130", "1999", "2008", "2014", "70,000", "10.1155", "10.24432"}  # hospitais, período, citação (ano e título), DOIs
+#: Números que fazem parte do texto fixo (anos dos dados e da consulta).
+NUMEROS_LIVRES = {"2024", "2025", "2026"}
 RE_NUMERO = re.compile(r"(?<![\w.,/\-])\d[\d.]*(?:,\d+)?(?![\w])")
 
 
@@ -286,6 +408,7 @@ def _numeros_do_texto(texto: str) -> set[str]:
     texto = re.sub(r"^#+ .*$", " ", texto, flags=re.M)  # títulos (ex.: "6.1") não são resultados
     texto = re.sub(r"`[^`]*`", " ", texto)
     texto = re.sub(r"!?\[[^\]]*\]\([^)]*\)", " ", texto)
+    texto = re.sub(r"https?://\S+", " ", texto)
     return {m.rstrip(".") for m in RE_NUMERO.findall(texto)}
 
 
@@ -301,7 +424,7 @@ def _universo_das_tabelas(pasta: Path) -> set[str]:
     aceitos: set[str] = set()
     for csv in pasta.glob("*.csv"):
         conteudo = csv.read_text(encoding="utf-8")
-        # Números já formatados em português dentro das células (ex.: "96,86%", "1.545").
+        # Números já formatados em português dentro das células (ex.: "7,05%", "145.342").
         aceitos |= _numeros_do_texto(conteudo)
         # Números "crus" (ponto decimal): geram as formas formatadas e arredondadas.
         for cru in re.findall(r"(?<![\w.])\d+(?:\.\d+)?(?![\w])", conteudo):
@@ -343,9 +466,17 @@ def test_todo_numero_do_readme_vem_das_tabelas(exec_a: Execucao) -> None:
         assert not orfaos, f"{nome}: números sem origem nas tabelas: {sorted(orfaos)}"
 
 
+def test_verificador_de_numeros_acusa_numero_inventado(exec_a: Execucao) -> None:
+    """O próprio verificador funciona: um número adulterado é pego."""
+    texto = (exec_a.caminhos.docs / "README.md").read_text(encoding="utf-8")
+    adulterado = texto.replace("145.342 acidentes", "145.399 acidentes", 1)
+    assert "145.399" in _checar_numeros(adulterado, exec_a.caminhos.tabelas)
+
+
 def test_readme_tem_as_secoes_obrigatorias(exec_a: Execucao) -> None:
     """O README segue a estrutura obrigatória (Mermaid, tabela de decisões, 10 perguntas...)."""
     texto = (exec_a.caminhos.docs / "README.md").read_text(encoding="utf-8")
+    assert texto.startswith("# README — Engenharia de Dados e Pré-processamento")
     assert "```mermaid" in texto
     for trecho in ("Resumo em 30 segundos", "Funil de linhas", "Mapa de ausentes",
                    "O que estava errado", "Antes × depois", "Atributos criados", "Cuidados",
@@ -353,6 +484,9 @@ def test_readme_tem_as_secoes_obrigatorias(exec_a: Execucao) -> None:
         assert trecho in texto, trecho
     perguntas = re.findall(r"^\d+\. \*\*.+\?\*\*", texto, flags=re.M)
     assert len(perguntas) == 10
+    # Nada do tema antigo (hospital) pode sobrar.
+    for antigo in ("readmi", "diabet", "hospital", "readmit"):
+        assert antigo not in texto.lower(), antigo
 
 
 def test_figuras_existem_com_dpi_adequado(exec_a: Execucao) -> None:
