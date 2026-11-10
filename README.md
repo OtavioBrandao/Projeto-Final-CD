@@ -43,7 +43,7 @@ Projeto-Final-CD/
 │   ├── raw/          # bruto (baixado por script, NÃO versionado)
 │   ├── interim/      # base legível gerada pelo pipeline (NÃO versionada: é grande)
 │   └── processed/    # base de modelagem + dicionário de dados (versionado)
-├── docs/             # engenharia de dados: README, plano, escolha da base, figuras, tabelas
+├── docs/             # engenharia de dados: README_pre_processamento, plano, escolha da base, seção do artigo, figuras, tabelas
 ├── notebooks/        # exploração (um notebook por pessoa: p2_..., p3_...)
 ├── reports/figuras/  # figuras finais usadas no artigo e nos slides
 ├── src/              # código por pessoa (p1_ ... p5_)
@@ -64,7 +64,7 @@ python -m src.p1_engenharia_dados.executar_pipeline   # refaz o tratamento (dado
 pytest                                                # testes do pipeline
 ```
 
-O tratamento de dados está especificado em [`docs/PLANO_IMPLEMENTACAO_ENGENHARIA_DE_DADOS.md`](docs/PLANO_IMPLEMENTACAO_ENGENHARIA_DE_DADOS.md) e explicado, com números e gráficos, em [`docs/README.md`](docs/README.md) (README da parte de Engenharia de Dados e Pré-processamento).
+O tratamento de dados está especificado em [`docs/PLANO_IMPLEMENTACAO_ENGENHARIA_DE_DADOS.md`](docs/PLANO_IMPLEMENTACAO_ENGENHARIA_DE_DADOS.md) e explicado, com números e gráficos, em [`docs/README_pre_processamento.md`](docs/README_pre_processamento.md) (README da parte de Engenharia de Dados e Pré-processamento).
 
 **Para as demais pessoas:** a base pronta para usar está em `data/processed/acidentes_prf_modelagem.csv` (ou `.parquet`), com o dicionário em `data/processed/dicionario_de_dados.csv`. O alvo é `acidente_fatal` (última coluna). Não há divisão treino/teste nem escalonamento/one-hot/imputação: isso é da Pessoa 3, dentro de um `Pipeline` do sklearn.
 
