@@ -1,0 +1,55 @@
+coluna,descricao_negocio,tipo,origem,sensivel,observacao
+race,Raça/cor informada no cadastro do paciente.,categorica,original,sim,Sensível: usar só para análise de equidade.
+gender,Sexo do paciente (Female ou Male).,binaria,original,sim,Sensível: não usar para discriminar.
+time_in_hospital,Dias de internação (de 1 a 14).,numerica,original,nao,Cauda longa; ver sinalização de outliers.
+payer_code,"Quem paga o atendimento (convênio/seguro), em código; 'Desconhecido' se não informado.",categorica,original,nao,Pode funcionar como proxy de condição socioeconômica (D06).
+num_lab_procedures,Quantidade de exames de laboratório feitos na internação.,numerica,original,nao,
+num_procedures,Quantidade de procedimentos (fora exames de laboratório) na internação.,numerica,original,nao,
+num_medications,Quantidade de medicamentos diferentes administrados na internação.,numerica,original,nao,
+number_outpatient,Consultas ambulatoriais do paciente no ano anterior à internação.,numerica,original,nao,Cauda longa.
+number_emergency,Visitas à emergência do paciente no ano anterior à internação.,numerica,original,nao,Cauda muito longa.
+number_inpatient,Internações do paciente no ano anterior à internação.,numerica,original,nao,Forte candidato a preditor.
+number_diagnoses,Quantidade de diagnósticos registrados na internação.,numerica,original,nao,
+max_glu_serum,"Resultado do exame de glicose no sangue: Norm, >200, >300 ou Nao_medido.",categorica,original,nao,"Nao_medido = exame não feito, não é dado faltante (D09)."
+A1Cresult,"Resultado da hemoglobina glicada (HbA1c): Norm, >7, >8 ou Nao_medido.",categorica,original,nao,"Nao_medido = exame não feito, não é dado faltante (D09)."
+metformin,"Mudança de dose do medicamento 'metformin' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+repaglinide,"Mudança de dose do medicamento 'repaglinide' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+nateglinide,"Mudança de dose do medicamento 'nateglinide' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+chlorpropamide,"Mudança de dose do medicamento 'chlorpropamide' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+glimepiride,"Mudança de dose do medicamento 'glimepiride' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+glipizide,"Mudança de dose do medicamento 'glipizide' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+glyburide,"Mudança de dose do medicamento 'glyburide' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+pioglitazone,"Mudança de dose do medicamento 'pioglitazone' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+rosiglitazone,"Mudança de dose do medicamento 'rosiglitazone' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+acarbose,"Mudança de dose do medicamento 'acarbose' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+insulin,"Mudança de dose do medicamento 'insulin' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+glyburide-metformin,"Mudança de dose do medicamento 'glyburide-metformin' na internação: No (não usado), Steady (dose mantida), Up (aumentada), Down (reduzida).",categorica,original,nao,"Nome do remédio mantido em inglês, como na base."
+change,"Houve mudança em algum medicamento de diabetes na internação (Ch = sim, No = não).",binaria,original,nao,
+diabetesMed,Algum medicamento para diabetes foi receitado (Yes ou No).,binaria,original,nao,
+tipo_admissao,"Como o paciente entrou (emergência, urgência, eletivo...).",categorica,derivada,nao,Nome vindo do IDS_mapping; 'Nao_informado' agrupa códigos nulos.
+origem_admissao,"De onde o paciente veio (encaminhamento, emergência, transferência...).",categorica,derivada,nao,Nome vindo do IDS_mapping; 'Nao_informado' agrupa códigos nulos.
+payer_code_ausente,1 se o convênio não estava informado na base original.,binaria,derivada,nao,D06.
+medical_specialty_ausente,1 se a especialidade do médico não estava informada na base original.,binaria,derivada,nao,D06.
+idade_media,Idade aproximada do paciente: ponto médio da faixa etária (faixa 60-70 vira 65).,numerica,derivada,sim,Sensível. Derivada de age (F02).
+grupo_diag_1,"Grupo clínico do diagnóstico principal (circulatório, diabetes, respiratório...).",categorica,derivada,nao,F03. Agrupamento CID-9 de Strack et al.
+grupo_diag_2,Grupo clínico do 2º diagnóstico.,categorica,derivada,nao,F03. 'Sem_diagnostico' quando não há (D08).
+grupo_diag_3,Grupo clínico do 3º diagnóstico.,categorica,derivada,nao,F03. 'Sem_diagnostico' quando não há (D08).
+total_visitas_previas,"Soma de consultas ambulatoriais, emergências e internações do ano anterior.",numerica,derivada,nao,F04.
+usuario_frequente,1 se o paciente teve ao menos uma internação no ano anterior.,binaria,derivada,nao,F05. Limiar de definição clínica.
+n_meds_alterados,Quantos medicamentos tiveram a dose aumentada ou reduzida.,numerica,derivada,nao,F06.
+n_meds_em_uso,Quantos medicamentos o paciente estava usando (qualquer valor diferente de No).,numerica,derivada,nao,F07.
+a1c_medido,1 se o exame de HbA1c foi feito na internação.,binaria,derivada,nao,F08.
+glicose_medida,1 se o exame de glicose foi feito na internação.,binaria,derivada,nao,F08.
+grupo_destino_alta,"Para onde o paciente foi na alta: Casa, Transferencia, Outros ou Nao_informado.",categorica,derivada,nao,F09. Óbito/hospice já foram removidos (D02).
+exames_por_dia,Exames de laboratório por dia de internação.,numerica,derivada,nao,F10.
+procedimentos_por_dia,Procedimentos por dia de internação.,numerica,derivada,nao,F10.
+especialidade_agrupada,"Especialidade do médico: as mais comuns, 'Outras' e 'Desconhecido'.",categorica,derivada,nao,F11. Lista do top-N calculada só por frequência (sem usar o alvo).
+time_in_hospital_outlier,1 se 'time_in_hospital' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+num_lab_procedures_outlier,1 se 'num_lab_procedures' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+num_procedures_outlier,1 se 'num_procedures' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+num_medications_outlier,1 se 'num_medications' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+number_outpatient_outlier,1 se 'number_outpatient' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+number_emergency_outlier,1 se 'number_emergency' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+number_inpatient_outlier,1 se 'number_inpatient' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+number_diagnoses_outlier,1 se 'number_diagnoses' está fora dos limites do IQR (valor atípico).,binaria,derivada,nao,Só sinaliza; o valor original NÃO foi alterado. Opcional para modelagem.
+readmit_30d,ALVO: 1 se o paciente voltou ao hospital em menos de 30 dias; 0 caso contrário.,alvo,derivada,nao,F01. Não use como atributo.
