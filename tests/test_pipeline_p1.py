@@ -3,7 +3,7 @@
 Verificam as regras do plano: rótulos "não sei" unificados, filtros D01 e D02,
 alvo correto e sem vazamento, valores impossíveis anulados, dicionário igual à
 base, funil de linhas fechando, reprodutibilidade (mesmo hash ao rodar duas
-vezes) e que todo número do ``docs/README.md`` vem das tabelas de ``docs/tabelas``.
+vezes) e que todo número do ``docs/README_pre_processamento.md`` vem das tabelas de ``docs/tabelas``.
 
 Os testes rodam o pipeline em **pastas temporárias**, sem tocar nos arquivos
 versionados. Precisam de ``data/raw`` (``python -m src.p1_engenharia_dados.baixar_base``).
@@ -459,8 +459,8 @@ def _checar_numeros(texto: str, pasta_tabelas: Path) -> set[str]:
 
 
 def test_todo_numero_do_readme_vem_das_tabelas(exec_a: Execucao) -> None:
-    """Cada número de ``docs/README.md`` e de ``secao_base_de_dados.md`` existe em ``docs/tabelas``."""
-    for nome in ("README.md", "secao_base_de_dados.md"):
+    """Cada número de ``docs/README_pre_processamento.md`` e de ``secao_base_de_dados.md`` existe em ``docs/tabelas``."""
+    for nome in ("README_pre_processamento.md", "secao_base_de_dados.md"):
         texto = (exec_a.caminhos.docs / nome).read_text(encoding="utf-8")
         orfaos = _checar_numeros(texto, exec_a.caminhos.tabelas)
         assert not orfaos, f"{nome}: números sem origem nas tabelas: {sorted(orfaos)}"
@@ -468,14 +468,14 @@ def test_todo_numero_do_readme_vem_das_tabelas(exec_a: Execucao) -> None:
 
 def test_verificador_de_numeros_acusa_numero_inventado(exec_a: Execucao) -> None:
     """O próprio verificador funciona: um número adulterado é pego."""
-    texto = (exec_a.caminhos.docs / "README.md").read_text(encoding="utf-8")
+    texto = (exec_a.caminhos.docs / "README_pre_processamento.md").read_text(encoding="utf-8")
     adulterado = texto.replace("145.342 acidentes", "145.399 acidentes", 1)
     assert "145.399" in _checar_numeros(adulterado, exec_a.caminhos.tabelas)
 
 
 def test_readme_tem_as_secoes_obrigatorias(exec_a: Execucao) -> None:
     """O README segue a estrutura obrigatória (Mermaid, tabela de decisões, 10 perguntas...)."""
-    texto = (exec_a.caminhos.docs / "README.md").read_text(encoding="utf-8")
+    texto = (exec_a.caminhos.docs / "README_pre_processamento.md").read_text(encoding="utf-8")
     assert texto.startswith("# README — Engenharia de Dados e Pré-processamento")
     assert "```mermaid" in texto
     for trecho in ("Resumo em 30 segundos", "Funil de linhas", "Mapa de ausentes",
@@ -493,7 +493,7 @@ def test_figuras_existem_com_dpi_adequado(exec_a: Execucao) -> None:
     """As figuras citadas no README existem e têm dpi >= 150."""
     from PIL import Image
 
-    texto = (exec_a.caminhos.docs / "README.md").read_text(encoding="utf-8")
+    texto = (exec_a.caminhos.docs / "README_pre_processamento.md").read_text(encoding="utf-8")
     figuras = re.findall(r"\]\((figuras/[^)]+\.png)\)", texto)
     assert len(figuras) >= 7
     for figura in figuras:

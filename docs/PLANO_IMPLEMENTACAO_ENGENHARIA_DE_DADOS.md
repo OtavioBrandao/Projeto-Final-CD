@@ -13,7 +13,7 @@ Transformar os acidentes de rodovias federais da PRF (2024 e 2025) em uma base l
 | Base para modelagem | `data/processed/acidentes_prf_modelagem.csv` (+ `.parquet`) |
 | Dicionário de dados | `data/processed/dicionario_de_dados.csv` |
 | Auditoria antes/depois | `docs/tabelas/*.csv` |
-| README da parte de Engenharia de Dados (estudo e apresentação) | `docs/README.md` + `docs/figuras/*.png` |
+| README da parte de Engenharia de Dados (estudo e apresentação) | `docs/README_pre_processamento.md` + `docs/figuras/*.png` |
 | Texto da seção "Base de Dados" do artigo | `docs/secao_base_de_dados.md` |
 | Testes | `tests/test_pipeline_p1.py` |
 
@@ -45,7 +45,7 @@ src/p1_engenharia_dados/
 ├── outliers.py             # detecção (IQR) e sinalização, sem alterar valores
 ├── selecao.py              # seleção de colunas + dicionário de dados
 ├── relatorios.py           # tabelas e figuras de docs/
-├── documentacao.py         # gera docs/README.md e docs/secao_base_de_dados.md
+├── documentacao.py         # gera docs/README_pre_processamento.md e docs/secao_base_de_dados.md
 └── executar_pipeline.py    # orquestra tudo
 ```
 
@@ -84,7 +84,7 @@ A auditoria mostrou que o problema desta base **não são nulos declarados**, e 
 - Categóricas: `Nao_informado` (D04).
 - Numéricas impossíveis: **nulo** (D05, D06, D07). Os nulos que sobram na base de modelagem (`idade_media_condutores`, `pct_condutores_homens`, `idade_media_veiculos`) são tratados pela Pessoa 3 **dentro do `Pipeline`** (ex.: `SimpleImputer(add_indicator=True)`).
 
-> **Diferença em relação ao planejamento do grupo:** o planejamento pede uma base "sem nulos". Preencher antes do split com média ou mediana vazaria informação do teste. Por isso os poucos nulos que sobram ficam documentados em `docs/README.md` e a imputação fica para o `Pipeline`.
+> **Diferença em relação ao planejamento do grupo:** o planejamento pede uma base "sem nulos". Preencher antes do split com média ou mediana vazaria informação do teste. Por isso os poucos nulos que sobram ficam documentados em `docs/README_pre_processamento.md` e a imputação fica para o `Pipeline`.
 
 ### 4.5 Atributos novos
 
@@ -141,9 +141,9 @@ Saem da base de modelagem, sempre com motivo registrado em `docs/tabelas/colunas
 - Colunas do dicionário = colunas do arquivo de modelagem.
 - Funil de linhas: `linhas_entrada − removidas = linhas_saida`.
 - Rodar o pipeline duas vezes produz o mesmo hash dos arquivos finais.
-- Todo número do `docs/README.md` e da seção do artigo existe em `docs/tabelas/*.csv`.
+- Todo número do `docs/README_pre_processamento.md` e da seção do artigo existe em `docs/tabelas/*.csv`.
 
-## 6. README da parte de Engenharia de Dados (`docs/README.md`)
+## 6. README da parte de Engenharia de Dados (`docs/README_pre_processamento.md`)
 
 É a base da apresentação (cerca de **3 minutos**, Bloco 2 do cronograma). Linguagem simples, direta. Tudo com **números gerados pelo código**. Estrutura:
 
@@ -164,9 +164,9 @@ Saem da base de modelagem, sempre com motivo registrado em `docs/tabelas/colunas
 - [ ] `python -m src.p1_engenharia_dados.executar_pipeline` roda do zero sem erro.
 - [ ] `pytest` passa.
 - [ ] Todos os arquivos da seção 1 existem.
-- [ ] Todo número do `docs/README.md` confere com `docs/tabelas/*.csv` (teste automático).
+- [ ] Todo número do `docs/README_pre_processamento.md` confere com `docs/tabelas/*.csv` (teste automático).
 - [ ] `python -m pydoc src.p1_engenharia_dados.limpeza` mostra a documentação das funções.
-- [ ] `docs/README.md` renderiza no GitHub (Mermaid e imagens).
+- [ ] `docs/README_pre_processamento.md` renderiza no GitHub (Mermaid e imagens).
 - [ ] Pull Request aberto para as Pessoas 2 e 3 revisarem.
 
 ## 8. Onde cada exigência do PDF do projeto está atendida
@@ -178,7 +178,7 @@ Fonte: *Projeto (2026-2).pdf* e *Planejamento - Projeto Final de Ciência de Dad
 | Base com > 5.000 linhas e ≥ 10 colunas úteis | [`ESCOLHA_DA_BASE.md`](ESCOLHA_DA_BASE.md) |
 | Base recente ("sem usar bases antigas") | 2024 e 2025 |
 | Não usar bases das Listas 1 e 2 nem *Hotel Booking* | [`ESCOLHA_DA_BASE.md`](ESCOLHA_DA_BASE.md) |
-| Limpeza, nulos, inconsistências, integração, transformação, seleção, outliers | Seções 4.1 a 4.7 e `docs/README.md` |
+| Limpeza, nulos, inconsistências, integração, transformação, seleção, outliers | Seções 4.1 a 4.7 e `docs/README_pre_processamento.md` |
 | Entregável: dataset limpo | `data/processed/` |
 | Entregável: texto da seção "Base de Dados" do artigo | `docs/secao_base_de_dados.md` |
 | Dataset "sem nulos" (planejamento) | Parcial: ver nota na seção 4.4 |

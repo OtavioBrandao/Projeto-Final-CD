@@ -1,6 +1,6 @@
 # Engenharia de Dados e Pré-processamento
 Entrega: base limpa para modelagem (data/processed) + documentação em docs/ + seção 'Base de Dados' do artigo.
-Plano detalhado: docs/PLANO_IMPLEMENTACAO_ENGENHARIA_DE_DADOS.md · README desta parte (estudo e apresentação): docs/README.md
+Plano detalhado: docs/PLANO_IMPLEMENTACAO_ENGENHARIA_DE_DADOS.md · README desta parte (estudo e apresentação): docs/README_pre_processamento.md
 
 Um comando refaz tudo (dados, tabelas, figuras e textos):
 

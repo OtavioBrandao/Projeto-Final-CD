@@ -1,11 +1,11 @@
-"""Gera ``docs/README.md`` e ``docs/secao_base_de_dados.md`` a partir das tabelas.
+"""Gera ``docs/README_pre_processamento.md`` e ``docs/secao_base_de_dados.md`` a partir das tabelas.
 
 Regra deste módulo: **nenhum número é digitado à mão**. Todos os valores do
 texto são lidos de ``docs/tabelas/*.csv`` (principalmente ``metricas.csv``) e
 formatados no padrão brasileiro. Assim, se os dados ou as regras mudarem, basta
 rodar o pipeline de novo e a documentação acompanha.
 
-O ``docs/README.md`` é o README da parte de Engenharia de Dados e
+O ``docs/README_pre_processamento.md`` é o README da parte de Engenharia de Dados e
 Pré-processamento (não é o README do repositório) e a base da apresentação.
 """
 
@@ -199,12 +199,12 @@ def _diagrama_mermaid(etapas: pd.DataFrame) -> str:
 
 
 # ---------------------------------------------------------------------------
-# docs/README.md
+# docs/README_pre_processamento.md
 # ---------------------------------------------------------------------------
 
 
 def _montar_readme(t: Path, n: Numeros) -> str:
-    """Monta o texto completo de ``docs/README.md``.
+    """Monta o texto completo de ``docs/README_pre_processamento.md``.
 
     Args:
         t: Pasta ``docs/tabelas``.
@@ -486,7 +486,7 @@ Na **transformação de variáveis**, as {n.i('n_causas_antes')} causas foram ag
 
 
 def gerar_documentacao(caminhos: Caminhos) -> tuple[Path, Path]:
-    """Gera ``docs/README.md`` e ``docs/secao_base_de_dados.md``.
+    """Gera ``docs/README_pre_processamento.md`` e ``docs/secao_base_de_dados.md``.
 
     Pré-requisito: as tabelas de ``docs/tabelas`` já foram gravadas pelo pipeline.
 
@@ -500,7 +500,7 @@ def gerar_documentacao(caminhos: Caminhos) -> tuple[Path, Path]:
         FileNotFoundError: Se ``docs/tabelas/metricas.csv`` não existir.
     """
     numeros = _ler_metricas(caminhos.tabelas)
-    readme = caminhos.docs / "README.md"
+    readme = caminhos.docs / "README_pre_processamento.md"
     secao = caminhos.docs / "secao_base_de_dados.md"
     readme.write_text(_montar_readme(caminhos.tabelas, numeros), encoding="utf-8", newline="\n")
     secao.write_text(_montar_secao_artigo(numeros), encoding="utf-8", newline="\n")

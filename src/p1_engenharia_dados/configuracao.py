@@ -8,7 +8,7 @@ arquivo, com um comentário dizendo de onde veio.
 Base: acidentes em rodovias federais registrados pela PRF (Polícia Rodoviária
 Federal), anos de 2024 e 2025. Os IDs (I01.., D01.., F01.., O01, S01) citados
 nos comentários são os mesmos de ``docs/PLANO_IMPLEMENTACAO_ENGENHARIA_DE_DADOS.md``
-e ``docs/README.md``.
+e ``docs/README_pre_processamento.md``.
 """
 
 from __future__ import annotations

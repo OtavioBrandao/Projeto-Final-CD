@@ -16,7 +16,7 @@ Saídas:
 * ``data/processed/acidentes_prf_modelagem.csv`` (+ ``.parquet``): base para modelagem;
 * ``data/processed/dicionario_de_dados.csv``;
 * ``docs/tabelas/*.csv`` e ``docs/figuras/*.png``: evidências e gráficos;
-* ``docs/README.md`` e ``docs/secao_base_de_dados.md``: textos gerados com os
+* ``docs/README_pre_processamento.md`` e ``docs/secao_base_de_dados.md``: textos gerados com os
   números das tabelas.
 
 O pipeline é determinístico: rodar duas vezes gera arquivos idênticos.
