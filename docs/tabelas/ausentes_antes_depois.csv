@@ -1,10 +1,14 @@
-coluna,id_decisao,n_nulos_antes,pct_nulos_antes,n_textos_none_antes,decisao,n_nulos_depois
-weight,D05,98569,96.86,0,coluna removida,removida
-medical_specialty,D06,49949,49.08,0,nulo -> 'Desconhecido' + flag medical_specialty_ausente,0
-payer_code,D06,40256,39.56,0,nulo -> 'Desconhecido' + flag payer_code_ausente,0
-race,D07,2273,2.23,0,nulo -> 'Desconhecido',0
-diag_3,D08,1423,1.4,0,nulo -> 'Sem_diagnostico',0
-diag_2,D08,358,0.35,0,nulo -> 'Sem_diagnostico',0
-diag_1,D08,21,0.02,0,nulo -> 'Sem_diagnostico',0
-max_glu_serum,D09,0,0.0,96420,'None' -> 'Nao_medido' (não era nulo),0
-A1Cresult,D09,0,0.0,84748,'None' -> 'Nao_medido' (não era nulo),0
+origem,coluna,id_decisao,n_antes,pct_antes,decisao,situacao_final
+pessoas,sexo,D04,58582,14.98,nulo/Ignorado/Não Informado -> 'Nao_informado',resumido por acidente (F11)
+pessoas,estado_fisico,D04,57615,14.73,nulo -> 'Nao_informado'; não é usada (consequência),não usada
+pessoas,ano_fabricacao_veiculo (impossível),D06,35155,8.99,vira nulo (não é substituído),5.545 acidentes sem idade média de veículos
+pessoas,tipo_envolvido,D04,34351,8.78,nulo -> 'Nao_informado',resumido por acidente (F11)
+pessoas,idade (impossível),D05,20841,5.33,vira nulo (não é substituída),7.009 acidentes sem idade média de condutores
+pessoas,tipo_veiculo,D04,12939,3.31,nulo -> 'Nao_informado'; veículo não entra nos tipos F11,resumido por acidente (F11)
+ocorrencias,condicao_metereologica,D04,1933,1.33,'Ignorado' -> 'Nao_informado',categoria 'Nao_informado'
+pessoas,condicao_metereologica,D04,4587,1.17,'Ignorado' -> 'Nao_informado',categoria 'Nao_informado'
+pessoas,sentido_via,D04,1034,0.26,'Não Informado' -> 'Nao_informado',categoria 'Nao_informado'
+ocorrencias,sentido_via,D04,356,0.24,'Não Informado' -> 'Nao_informado',categoria 'Nao_informado'
+ocorrencias,classificacao_acidente,D04,2,0.0,'NA' -> 'Nao_informado',coluna sai da modelagem (consequência)
+pessoas,classificacao_acidente,D04,10,0.0,'NA' -> 'Nao_informado',coluna sai da modelagem (consequência)
+ocorrencias,latitude/longitude (fora do Brasil),D07,0,0.0,vira nulo só se impossível,0 nulos

@@ -1,51 +1,66 @@
-coluna,tipo,n_nulos,pct_nulos,n_interrogacoes_no_arquivo,n_textos_none,n_distintos,exemplo,observacao
-encounter_id,numerica,0,0.0,0,0,101766,2278392,Identificador do encontro (sai da base de modelagem).
-patient_nbr,numerica,0,0.0,0,0,71518,8222157,Identificador do paciente; repete quando há vários encontros (D03).
-race,texto,2273,2.23,2273,0,5,Caucasian,Atributo sensível; '?' vira 'Desconhecido' (D07).
-gender,texto,0,0.0,0,0,3,Female,Contém 'Unknown/Invalid' em poucos registros (D01).
-age,texto,0,0.0,0,0,10,[0-10),
-weight,texto,98569,96.86,98569,0,9,[75-100),Quase toda ausente: imputar seria inventar dado (D05).
-admission_type_id,numerica,0,0.0,0,0,8,6,
-discharge_disposition_id,numerica,0,0.0,0,0,26,25,Contém códigos de óbito/hospice (D02).
-admission_source_id,numerica,0,0.0,0,0,17,1,
-time_in_hospital,numerica,0,0.0,0,0,14,1,
-payer_code,texto,40256,39.56,40256,0,17,MC,"Ausência pode ser informativa, ex.: paciente sem convênio (D06)."
-medical_specialty,texto,49949,49.08,49949,0,72,Pediatrics-Endocrinology,Ausência pode ser informativa (D06); dezenas de níveis raros (F11).
-num_lab_procedures,numerica,0,0.0,0,0,118,41,
-num_procedures,numerica,0,0.0,0,0,7,0,
-num_medications,numerica,0,0.0,0,0,75,1,
-number_outpatient,numerica,0,0.0,0,0,39,0,
-number_emergency,numerica,0,0.0,0,0,33,0,
-number_inpatient,numerica,0,0.0,0,0,21,0,
-diag_1,texto,21,0.02,21,0,716,250.83,Código CID-9; agrupado em F03.
-diag_2,texto,358,0.35,358,0,748,250.01,"Ausência de diagnóstico secundário é real, não erro (D08)."
-diag_3,texto,1423,1.4,1423,0,789,255,"Ausência de diagnóstico secundário é real, não erro (D08)."
-number_diagnoses,numerica,0,0.0,0,0,16,1,
-max_glu_serum,texto,0,0.0,0,96420,4,None,"'None' = exame não realizado, NÃO é nulo (D09)."
-A1Cresult,texto,0,0.0,0,84748,4,None,"'None' = exame não realizado, NÃO é nulo (D09)."
-metformin,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-repaglinide,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-nateglinide,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-chlorpropamide,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-glimepiride,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-acetohexamide,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-glipizide,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-glyburide,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-tolbutamide,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-pioglitazone,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-rosiglitazone,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-acarbose,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-miglitol,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-troglitazone,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-tolazamide,texto,0,0.0,0,0,3,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-examide,texto,0,0.0,0,0,1,No,Constante: não traz informação (candidata a remoção).
-citoglipton,texto,0,0.0,0,0,1,No,Constante: não traz informação (candidata a remoção).
-insulin,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-glyburide-metformin,texto,0,0.0,0,0,4,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-glipizide-metformin,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-glimepiride-pioglitazone,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-metformin-rosiglitazone,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-metformin-pioglitazone,texto,0,0.0,0,0,2,No,Medicamento (No/Steady/Up/Down); base dos atributos F06 e F07.
-change,texto,0,0.0,0,0,2,No,
-diabetesMed,texto,0,0.0,0,0,2,No,
-readmitted,texto,0,0.0,0,0,3,NO,Alvo original com 3 classes ('NO' em maiúsculas: D04); vira readmit_30d (F01).
+origem,coluna,tipo,n_nulos,pct_nulos,n_rotulos_sem_informacao,pct_sem_informacao,n_distintos,exemplo,observacao
+ocorrencias,id,numerica,0,0.0,0,0.0,145731,571789.0,Identificador do acidente; liga ocorrências e pessoas.
+ocorrencias,data_inversa,texto,0,0.0,0,0.0,731,2024-01-01,
+ocorrencias,dia_semana,texto,0,0.0,0,0.0,7,segunda-feira,
+ocorrencias,horario,texto,0,0.0,0,0.0,1437,03:56:00,
+ocorrencias,uf,texto,0,0.0,0,0.0,27,ES,
+ocorrencias,br,numerica,0,0.0,0,0.0,118,101,
+ocorrencias,km,numerica,0,0.0,0,0.0,8660,38.0,
+ocorrencias,municipio,texto,0,0.0,0,0.0,1943,CONCEICAO DA BARRA,
+ocorrencias,causa_acidente,texto,0,0.0,0,0.0,69,Ultrapassagem Indevida,69 causas distintas; agrupadas em F06.
+ocorrencias,tipo_acidente,texto,0,0.0,0,0.0,17,Colisão lateral sentido oposto,
+ocorrencias,classificacao_acidente,texto,2,0.0,0,0.0,3,Com Vítimas Fatais,Consequência do acidente (vazamento se usada como atributo); contém 'NA' (D04).
+ocorrencias,fase_dia,texto,0,0.0,0,0.0,4,Plena Noite,
+ocorrencias,sentido_via,texto,0,0.0,356,0.24,3,Crescente,Contém 'Não Informado' (D04).
+ocorrencias,condicao_metereologica,texto,0,0.0,1933,1.33,10,Céu Claro,Contém 'Ignorado' (D04).
+ocorrencias,tipo_pista,texto,0,0.0,0,0.0,3,Simples,
+ocorrencias,tracado_via,texto,0,0.0,0,0.0,898,Reta,Valores compostos separados por ';' (F07).
+ocorrencias,uso_solo,texto,0,0.0,0,0.0,2,Não,
+ocorrencias,pessoas,numerica,0,0.0,0,0.0,71,3,Consequência (total de envolvidos); contagens nem sempre fecham (D03).
+ocorrencias,mortos,numerica,0,0.0,0,0.0,16,0,"Define o alvo acidente_fatal (F01); consequência, não pode ser atributo."
+ocorrencias,feridos_leves,numerica,0,0.0,0,0.0,39,0,
+ocorrencias,feridos_graves,numerica,0,0.0,0,0.0,23,1,
+ocorrencias,ilesos,numerica,0,0.0,0,0.0,60,1,
+ocorrencias,ignorados,numerica,0,0.0,0,0.0,21,1,
+ocorrencias,feridos,numerica,0,0.0,0,0.0,46,1,
+ocorrencias,veiculos,numerica,0,0.0,0,0.0,24,3,
+ocorrencias,latitude,numerica,0,0.0,0,0.0,102875,-18.48261,Vírgula decimal; latitude positiva só vale no extremo norte (D07).
+ocorrencias,longitude,numerica,0,0.0,0,0.0,102805,-39.92379,Vírgula decimal; conferida contra a caixa do Brasil (D07).
+ocorrencias,regional,texto,0,0.0,0,0.0,30,SPRF-ES,Coluna administrativa; sai da modelagem.
+ocorrencias,delegacia,texto,0,0.0,0,0.0,155,DEL04-ES,Coluna administrativa; sai da modelagem.
+ocorrencias,uop,texto,0,0.0,0,0.0,400,UOP02-DEL04-ES,Coluna administrativa (quem atendeu); sai da modelagem.
+pessoas,id,numerica,0,0.0,0,0.0,145731,571789.0,Identificador do acidente; liga ocorrências e pessoas.
+pessoas,pesid,numerica,0,0.0,0,0.0,356727,1269011,
+pessoas,data_inversa,texto,0,0.0,0,0.0,731,2024-01-01,
+pessoas,dia_semana,texto,0,0.0,0,0.0,7,segunda-feira,
+pessoas,horario,texto,0,0.0,0,0.0,1437,03:56:00,
+pessoas,uf,texto,0,0.0,0,0.0,27,ES,
+pessoas,br,numerica,0,0.0,0,0.0,118,101,
+pessoas,km,numerica,0,0.0,0,0.0,8660,38.0,
+pessoas,municipio,texto,0,0.0,0,0.0,1943,CONCEICAO DA BARRA,
+pessoas,causa_acidente,texto,0,0.0,0,0.0,69,Ultrapassagem Indevida,69 causas distintas; agrupadas em F06.
+pessoas,tipo_acidente,texto,0,0.0,0,0.0,17,Colisão lateral sentido oposto,
+pessoas,classificacao_acidente,texto,10,0.0,0,0.0,3,Com Vítimas Fatais,Consequência do acidente (vazamento se usada como atributo); contém 'NA' (D04).
+pessoas,fase_dia,texto,0,0.0,0,0.0,4,Plena Noite,
+pessoas,sentido_via,texto,0,0.0,1034,0.26,3,Crescente,Contém 'Não Informado' (D04).
+pessoas,condicao_metereologica,texto,0,0.0,4587,1.17,10,Céu Claro,Contém 'Ignorado' (D04).
+pessoas,tipo_pista,texto,0,0.0,0,0.0,3,Simples,
+pessoas,tracado_via,texto,0,0.0,0,0.0,898,Reta,Valores compostos separados por ';' (F07).
+pessoas,uso_solo,texto,0,0.0,0,0.0,2,Não,
+pessoas,id_veiculo,numerica,0,0.0,0,0.0,279212,1018240,
+pessoas,tipo_veiculo,texto,12939,3.31,0,3.31,25,Caminhão-trator,
+pessoas,marca,texto,0,0.0,0,0.0,9296,M.BENZ/AXOR 2544 LS,
+pessoas,ano_fabricacao_veiculo,numerica,0,0.0,0,0.0,75,2014,Contém 0 como 'não informado' (D06).
+pessoas,tipo_envolvido,texto,34351,8.78,0,8.78,5,Condutor,
+pessoas,estado_fisico,texto,34351,8.78,23264,14.73,5,Ileso,
+pessoas,idade,numerica,0,0.0,0,0.0,136,46,Há valores impossíveis (ex.: 2024) (D05).
+pessoas,sexo,texto,34351,8.78,24231,14.98,4,Masculino,Atributo sensível; três formas de 'não sei' (D04).
+pessoas,ilesos,numerica,0,0.0,0,0.0,2,1,
+pessoas,feridos_leves,numerica,0,0.0,0,0.0,2,0,
+pessoas,feridos_graves,numerica,0,0.0,0,0.0,2,0,
+pessoas,mortos,numerica,0,0.0,0,0.0,2,0,"Define o alvo acidente_fatal (F01); consequência, não pode ser atributo."
+pessoas,latitude,numerica,0,0.0,0,0.0,102875,-18.48261,Vírgula decimal; latitude positiva só vale no extremo norte (D07).
+pessoas,longitude,numerica,0,0.0,0,0.0,102805,-39.92379,Vírgula decimal; conferida contra a caixa do Brasil (D07).
+pessoas,regional,texto,0,0.0,0,0.0,30,SPRF-ES,Coluna administrativa; sai da modelagem.
+pessoas,delegacia,texto,0,0.0,0,0.0,155,DEL04-ES,Coluna administrativa; sai da modelagem.
+pessoas,uop,texto,0,0.0,0,0.0,400,UOP02-DEL04-ES,Coluna administrativa (quem atendeu); sai da modelagem.

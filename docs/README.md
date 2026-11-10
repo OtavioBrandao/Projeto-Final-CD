@@ -1,13 +1,13 @@
-# Tratamento de dados — Pessoa 1 (Engenharia de Dados e Pré-processamento)
+# README — Engenharia de Dados e Pré-processamento
 
-> **Este arquivo é gerado por código** (`python -m src.p1_engenharia_dados.executar_pipeline`) e todos os números vêm de [`tabelas/`](tabelas/). Não edite à mão: rode o pipeline de novo.
+> Este é o README **da parte de Engenharia de Dados e Pré-processamento** (limpeza, integração e atributos), não o README do repositório. Ele é a base da apresentação desta etapa. **É gerado por código** (`python -m src.p1_engenharia_dados.executar_pipeline`) e todos os números vêm de [`tabelas/`](tabelas/). Não edite à mão: rode o pipeline de novo.
 
 ## 1. Resumo em 30 segundos
 
-- **De onde vem:** base *Diabetes 130-US Hospitals* (UCI, 130 hospitais dos EUA, 1999–2008): **101.766 internações**, **50 colunas**, **71.518 pacientes**. Queremos prever se o paciente volta ao hospital em **menos de 30 dias**.
-- **O que estava errado:** `?` no lugar de dado (192.849 ocorrências em 7 colunas), coluna `weight` com 96,86% de ausentes, o mesmo paciente repetido (30.248 encontros a mais), pacientes que morreram ou foram para hospice, códigos numéricos sem nome e a armadilha do `None`.
-- **O que fizemos:** juntamos os nomes dos códigos, removemos o que não podia entrar (3 + 30.248 + 1.545 linhas), tratamos os ausentes coluna por coluna, criamos atributos novos, sinalizamos outliers e tiramos colunas sem utilidade. **Sem escalonar, sem one-hot, sem imputar média:** isso é da Pessoa 3, depois do split.
-- **O que ficou:** **69.970 linhas × 54 colunas** em `data/processed/`, com **8,97%** de readmissões em < 30 dias (classe desbalanceada).
+- **De onde vem:** Dados Abertos da **PRF** (Polícia Rodoviária Federal), acidentes em rodovias federais de **2024 e 2025**: **145.731 acidentes** em 30 colunas, mais **391.077 linhas de pessoas/veículos** em outro arquivo. Queremos entender e prever quais acidentes terminam em **morte**.
+- **O que estava errado:** dados de pessoas em arquivo separado, idades impossíveis (máximo de 2024 anos), ano de fabricação 0, "não sei" escrito de várias formas, contagens de vítimas que não fecham (7.672 acidentes), traçado da via com 898 combinações e 69 causas.
+- **O que fizemos:** juntamos pessoas aos acidentes, anulamos valores impossíveis, unificamos os rótulos, removemos 389 linhas (suicídios presumidos e sinistros pessoais; nenhum duplicado), criamos atributos de hora, calendário, causa, via e envolvidos, sinalizamos outliers e tiramos as colunas que **vazam o alvo**. **Sem escalonar, sem one-hot, sem imputar média:** isso é da Pessoa 3, depois do split.
+- **O que ficou:** **145.342 acidentes × 42 colunas** em `data/processed/`, com **7,05%** de acidentes fatais (classe desbalanceada).
 
 ## 2. Diagrama do pipeline
 
@@ -15,15 +15,15 @@ Cada caixa mostra o tamanho da base **depois** da etapa.
 
 ```mermaid
 flowchart LR
-    N0["Bruto<br/>101.766 linhas × 50 colunas"]
+    N0["Bruto (ocorrências)<br/>145.731 linhas × 30 colunas"]
     AUD["Auditoria inicial<br/>só mede, não altera"]
-    N1["Integração IDS_mapping<br/>101.766 linhas × 53 colunas"]
-    N2["Padronização (D04)<br/>101.766 linhas × 53 colunas"]
-    N3["Filtros D01, D03, D02<br/>69.970 linhas × 53 colunas"]
-    N4["Ausentes (D05-D09)<br/>69.970 linhas × 54 colunas"]
-    N5["Atributos (F01-F11)<br/>69.970 linhas × 69 colunas"]
-    N6["Outliers (sinalização)<br/>69.970 linhas × 77 colunas"]
-    N7["Seleção (base final)<br/>69.970 linhas × 54 colunas"]
+    N1["Integração com pessoas (I01)<br/>145.731 linhas × 38 colunas"]
+    N2["Padronização de rótulos (D04)<br/>145.731 linhas × 38 colunas"]
+    N3["Filtros D01 e D02<br/>145.342 linhas × 38 colunas"]
+    N4["Inconsistências (D03, D07)<br/>145.342 linhas × 39 colunas"]
+    N5["Atributos (F01-F11)<br/>145.342 linhas × 58 colunas"]
+    N6["Outliers (sinalização)<br/>145.342 linhas × 62 colunas"]
+    N7["Seleção (base final)<br/>145.342 linhas × 42 colunas"]
     N0 --> AUD --> N1
     N1 --> N2
     N2 --> N3
@@ -35,38 +35,41 @@ flowchart LR
 
 ## 3. Funil de linhas
 
-Saímos de **101.766** e ficamos com **69.970** (68,76% do total). O maior corte foi **só o 1º encontro por paciente** (D03).
+Saímos de **145.731** e ficamos com **145.342** (99,73% do total). Esta base perde pouca coisa: ela já vem organizada pela PRF. O maior corte foi **suicídio presumido e sinistro pessoal** (D02).
 
 ![Funil de linhas](figuras/funil_linhas.png)
 
 | ID | O que fez | Linhas antes | Removidas | % do bruto | Linhas depois |
 |---|---|---|---|---|---|
-| Entrada | Base bruta | 101.766 | 0 | 0,000% | 101.766 |
-| D01 | Sexo Unknown/Invalid | 101.766 | 3 | 0,003% | 101.763 |
-| D03 | Só o 1º encontro por paciente | 101.763 | 30.248 | 29,723% | 71.515 |
-| D02 | Óbito/hospice na alta | 71.515 | 1.545 | 1,518% | 69.970 |
+| Entrada | Base bruta | 145.731 | 0 | 0,000% | 145.731 |
+| D01 | Acidentes duplicados | 145.731 | 0 | 0,000% | 145.731 |
+| D02 | Suicídio presumido e sinistro pessoal | 145.731 | 389 | 0,267% | 145.342 |
 
-- **D01** — sexo `Unknown/Invalid`: não dá para recuperar o valor correto.
-- **D03** — o mesmo paciente aparece várias vezes; o modelo não pode ver o mesmo paciente no treino e no teste.
-- **D02** — óbito/hospice na alta (códigos 11, 13, 14, 19, 20, 21): quem faleceu não pode ser readmitido. No bruto havia 2.423 encontros assim; depois de ficar com 1 encontro por paciente, sobraram 1.545 para remover.
+- **D01**: duplicidade checada **depois** de juntar as pessoas. 1 registro(s) igual(is) no arquivo de ocorrências; após juntar as pessoas, 0 continuam idênticos (os demais são acidentes distintos).
+- **D02**: suicídio presumido e sinistro pessoal não são acidentes de trânsito. Nenhuma ação de segurança viária os evitaria e eles inflariam a taxa de fatais. Foram 389 acidentes, 195 deles fatais.
+- A integração com o arquivo de pessoas **não perde acidentes**: 0 acidentes ficaram sem pessoas.
 
-## 4. Mapa de ausentes
+## 4. Mapa de ausentes e valores impossíveis
 
 ![Mapa de ausentes](figuras/mapa_ausentes.png)
 
-| Coluna | ID | Nulos (`?`) antes | % antes | Textos `None` | Decisão | Nulos depois |
+| Coluna | Arquivo | ID | Linhas afetadas | % antes | O que fizemos | Situação final |
 |---|---|---|---|---|---|---|
-| weight | D05 | 98.569 | 96,86% | 0 | coluna removida | removida |
-| medical_specialty | D06 | 49.949 | 49,08% | 0 | nulo -> 'Desconhecido' + flag medical_specialty_ausente | 0 |
-| payer_code | D06 | 40.256 | 39,56% | 0 | nulo -> 'Desconhecido' + flag payer_code_ausente | 0 |
-| race | D07 | 2.273 | 2,23% | 0 | nulo -> 'Desconhecido' | 0 |
-| diag_3 | D08 | 1.423 | 1,40% | 0 | nulo -> 'Sem_diagnostico' | 0 |
-| diag_2 | D08 | 358 | 0,35% | 0 | nulo -> 'Sem_diagnostico' | 0 |
-| diag_1 | D08 | 21 | 0,02% | 0 | nulo -> 'Sem_diagnostico' | 0 |
-| max_glu_serum | D09 | 0 | 0,00% | 96.420 | 'None' -> 'Nao_medido' (não era nulo) | 0 |
-| A1Cresult | D09 | 0 | 0,00% | 84.748 | 'None' -> 'Nao_medido' (não era nulo) | 0 |
+| sexo | pessoas | D04 | 58.582 | 14,98% | nulo/Ignorado/Não Informado -> 'Nao_informado' | resumido por acidente (F11) |
+| estado_fisico | pessoas | D04 | 57.615 | 14,73% | nulo -> 'Nao_informado'; não é usada (consequência) | não usada |
+| ano_fabricacao_veiculo (impossível) | pessoas | D06 | 35.155 | 8,99% | vira nulo (não é substituído) | 5.545 acidentes sem idade média de veículos |
+| tipo_envolvido | pessoas | D04 | 34.351 | 8,78% | nulo -> 'Nao_informado' | resumido por acidente (F11) |
+| idade (impossível) | pessoas | D05 | 20.841 | 5,33% | vira nulo (não é substituída) | 7.009 acidentes sem idade média de condutores |
+| tipo_veiculo | pessoas | D04 | 12.939 | 3,31% | nulo -> 'Nao_informado'; veículo não entra nos tipos F11 | resumido por acidente (F11) |
+| condicao_metereologica | ocorrencias | D04 | 1.933 | 1,33% | 'Ignorado' -> 'Nao_informado' | categoria 'Nao_informado' |
+| condicao_metereologica | pessoas | D04 | 4.587 | 1,17% | 'Ignorado' -> 'Nao_informado' | categoria 'Nao_informado' |
+| sentido_via | pessoas | D04 | 1.034 | 0,26% | 'Não Informado' -> 'Nao_informado' | categoria 'Nao_informado' |
+| sentido_via | ocorrencias | D04 | 356 | 0,24% | 'Não Informado' -> 'Nao_informado' | categoria 'Nao_informado' |
+| classificacao_acidente | ocorrencias | D04 | 2 | 0,00% | 'NA' -> 'Nao_informado' | coluna sai da modelagem (consequência) |
+| classificacao_acidente | pessoas | D04 | 10 | 0,00% | 'NA' -> 'Nao_informado' | coluna sai da modelagem (consequência) |
+| latitude/longitude (fora do Brasil) | ocorrencias | D07 | 0 | 0,00% | vira nulo só se impossível | 0 nulos |
 
-**Ponto didático (D09):** o `pandas` lê o texto `None` como nulo por padrão. Em `max_glu_serum` (94,75%) e `A1Cresult` (83,28%) `None` quer dizer **"exame não foi feito"**, que é informação, não ausência. Por isso lemos o arquivo com `keep_default_na=False` e só `?` vira nulo. Depois da limpeza sobraram **0** nulos.
+**Ponto didático:** aqui quase não há nulo de verdade (só 2 textos `NA`). O problema é diferente: **rótulos "não sei"** (`Ignorado`, `Não Informado`, `NA`) e **valores impossíveis** (idade 2024, ano de fabricação 0). Nulo declarado é fácil de ver; valor impossível passa despercebido e estraga a média. Por isso a auditoria olha os valores, não só os nulos.
 
 ## 5. O que estava errado → o que fizemos → por quê
 
@@ -74,18 +77,18 @@ Esta é a tabela mais importante. Cada linha é uma decisão registrada no códi
 
 | ID | O que estava errado | Evidência (número) | O que fizemos | Por quê | Impacto |
 |---|---|---|---|---|---|
-| I01 | Códigos numéricos sem significado (tipo de admissão, destino de alta, origem) | 3 tabelas dentro do IDS_mapping; 11 códigos significam 'sem informação' | Join com o IDS_mapping criando tipo_admissao, destino_alta, origem_admissao; NULL/Not Available/Not Mapped viram 'Nao_informado' | Nomes legíveis ajudam EDA, SHAP e a explicação ao hospital | +3 colunas legíveis; 15.256 linhas usam algum código 'sem informação' |
-| D01 | Sexo 'Unknown/Invalid' | 3 registros | Remover os registros | Pouquíssimos casos e sem como recuperar o valor correto | -3 linhas |
-| D02 | Pacientes que faleceram ou foram para hospice na alta | 1.545 encontros-índice nos códigos 11, 13, 14, 19, 20, 21 | Remover | Não podem ser readmitidos: o alvo seria 0 por motivo alheio ao atendimento e a taxa de readmissão ficaria subestimada | -1.545 linhas |
-| D03 | Mesmo paciente com vários encontros | 30.248 encontros além do primeiro; 16.773 pacientes com mais de um encontro | Manter só o primeiro encontro (menor encounter_id) de cada paciente | Linhas do mesmo paciente não são independentes; no treino e no teste ao mesmo tempo o modelo 'decora' o paciente (vazamento) | -30.248 linhas; 1 linha por paciente |
-| D04 | Mesma categoria escrita de formas diferentes | 'NO' em 54.864 linhas de readmitted (o resto da base usa 'No'); 24 descrições do mapeamento com espaço/ponto sobrando | Tirar espaços, padronizar a caixa e unificar NULL/Not Available/Not Mapped em 'Nao_informado' | Grafias diferentes viram categorias falsas para o modelo | 54.864 células ajustadas nos dados |
-| D05 | Coluna weight quase toda ausente | 96,86% de nulos | Remover a coluna | Imputar o peso de quase todo mundo seria inventar dado | -1 coluna |
-| D06 | payer_code e medical_specialty com muitos ausentes | 39,56% e 49,08% de nulos | Nulo -> 'Desconhecido' e criar flag *_ausente (0/1) | A ausência pode ser informativa (ex.: paciente sem convênio) e não perdemos linhas | +2 colunas de flag; 0 nulos nessas colunas |
-| D07 | race com '?' | 2,23% de nulos (2.273 linhas) | '?' -> 'Desconhecido' | Evita perder linhas; é atributo sensível e não deve ser usado para discriminar | 0 nulos em race |
-| D08 | diag_1, diag_2 e diag_3 vazios | 0,02%, 0,35% e 1,40% de nulos | Nulo -> 'Sem_diagnostico' | Não ter 2º ou 3º diagnóstico é um fato clínico, não um erro | 0 nulos nos diagnósticos |
-| D09 | 'None' em max_glu_serum e A1Cresult parece nulo, mas não é | 'None' em 94,75% (glicose) e 83,28% (HbA1c) das linhas brutas; o pandas lê 'None' como nulo se não for avisado | Ler com keep_default_na=False e renomear 'None' -> 'Nao_medido' | Significa 'exame não feito', que é informação sobre o cuidado ao paciente | Nenhum dado perdido; vira a categoria 'Nao_medido' e as flags F08 |
-| O01 | Valores extremos (cauda longa) nas variáveis de contagem | 8 de 8 variáveis têm outliers pelo IQR (de 0,14% a 13,03% das linhas) | Só sinalizar (colunas *_outlier); não remover nem limitar | São clinicamente plausíveis (pacientes graves); limitar valores exige estimar limites só no treino (Pessoa 3) | +8 colunas de sinalização; valores intactos |
-| S01 | Colunas sem informação ou redundantes | 11 colunas com um único valor em >= 99,9% das linhas; 0 pares com \|r\| > 0,9 | Remover identificadores, colunas substituídas, quase constantes e redundantes | Menos ruído, nenhum vazamento (e o readmitted original sai da base de modelagem) | 77 colunas no interim -> 54 na base de modelagem |
+| I01 | Idade, sexo e tipo de veículo estão em outro arquivo (um por pessoa) | 391.077 linhas de pessoas para 145.731 acidentes; 0 acidentes sem pessoas | Resumir as pessoas por acidente (F11) e juntar pelo `id` (join à esquerda) | Idade do condutor, moto, caminhão e pedestre ajudam a explicar o risco e só existem nesse arquivo | +8 colunas; nenhum acidente perdido |
+| I02 | Os dados não dizem se o dia era feriado | 5.334 acidentes (3,67%) caíram em feriado nacional | Calcular feriados nacionais (fixos + Páscoa) e criar `eh_feriado` | Feriados concentram viagens longas e mudam o perfil do tráfego | +1 coluna |
+| I03 | 27 UFs e quase 2 mil municípios para descrever o local | 27 UFs e 1.943 municípios | Mapear UF -> região do Brasil (IBGE) e criar `regiao` | Reduz a cardinalidade mantendo o sentido geográfico | +1 coluna |
+| D01 | Acidentes que podem ter sido lançados duas vezes | 1 registro(s) igual(is) ao anterior em todos os campos do arquivo de ocorrências (exceto o `id`); depois de juntar as pessoas, 0 continuam idênticos | Checar a duplicidade **depois** de juntar as pessoas e remover só os idênticos também nelas | Dois registros iguais só no cabeçalho podem ser acidentes distintos no mesmo minuto; remover seria apagar um acidente real | -0 linha(s) |
+| D02 | Suicídios presumidos e sinistros pessoais não são acidentes de trânsito | 389 acidentes: causa 'Suicídio (presumido)' (377) ou tipo 'Sinistro pessoal de trânsito' (20) | Remover | Nenhuma ação de segurança viária (fiscalização, sinalização, obra) evitaria esses eventos; eles inflariam a taxa de fatais | -389 linhas (195 fatais) |
+| D03 | As contagens de vítimas não fecham | 7.672 acidentes (5,28%) em que mortos + feridos + ilesos + ignorados != pessoas | Sinalizar em `contagens_inconsistentes` (só no interim); não corrigir | Não sabemos qual campo está errado; o alvo usa só `mortos` | 0 linhas removidas |
+| D04 | A PRF escreve "não sei" de várias formas | 'Ignorado' em 1.933 acidentes (clima), 'Não Informado' em 356 (sentido da via), 'NA' em 2 (classificação); sexo sem informação em 14,98% das linhas de pessoas | Unificar em `Nao_informado` | Palavras diferentes para a mesma coisa viram categorias falsas para o modelo | 2.291 células ajustadas |
+| D05 | Idades impossíveis | Idade máxima de 2024 anos; 420 idades fora de 0 a 110; 20.421 condutores (8,34%) com menos de 10 anos (a PRF usa 0 como 'não informado') | Idade impossível vira nulo (não é substituída por média) | Não dá para saber a idade real; inventar uma distorceria a média de idade dos condutores | 7.009 acidentes (4,82%) ficam sem idade média |
+| D06 | Ano de fabricação impossível | 35.155 linhas de pessoas (8,99%) com ano 0, 1900 ou futuro, sendo 35.106 com 0 | Vira nulo; a idade do veículo só usa anos válidos | O valor 0 viraria veículos de 2.025 anos | 5.545 acidentes (3,82%) ficam sem idade média de veículos |
+| D07 | Latitude positiva parece erro, mas não é | 593 acidentes com latitude >= 0, todos em UFs ao norte do Equador (válidos: 593); 0 coordenadas fora do Brasil | Conferir contra a caixa do Brasil e a UF; anular só as impossíveis | Latitude positiva é correta em AP e RR; removê-las seria um erro | 0 coordenadas anuladas |
+| O01 | Valores extremos (cauda longa) | 4 de 4 variáveis têm outliers pelo IQR (de 0,63% a 7,19% das linhas); um acidente chega a 82 veículos | Só sinalizar (colunas `*_outlier`); não remover nem limitar | Acidentes com muitos veículos existem (engavetamentos) e estão entre os mais graves; limitar valores exige estimar limites só no treino (Pessoa 3) | +4 colunas de sinalização; valores intactos |
+| S01 | Colunas que vazam o alvo, são administrativas, redundantes ou sem informação | 8 colunas de consequência do acidente; 0 quase constantes; 0 pares com \|r\| > 0,9 | Remover identificador, consequências, administrativas, substituídas, quase constantes e redundantes | As consequências (mortos, feridos, classificação) definem o alvo: usá-las seria vazamento | 63 colunas no interim -> 42 na base de modelagem |
 
 ## 6. Antes × depois
 
@@ -93,7 +96,7 @@ Esta é a tabela mais importante. Cada linha é uma decisão registrada no códi
 
 ![Alvo antes e depois](figuras/antes_depois_alvo.png)
 
-O alvo original `readmitted` tinha 3 classes (`No`, `>30`, `<30`) e 11,16% de `<30` no bruto. Viramos `readmit_30d` (1 = `<30`). Depois dos filtros, a classe positiva tem **6.277** linhas (**8,97%**). É minoria: na modelagem, prefira F1, AUC e *class weights* à acurácia.
+A PRF classifica o acidente em 3 classes (`Sem Vítimas`, `Com Vítimas Feridas`, `Com Vítimas Fatais`). Criamos `acidente_fatal` (1 = ao menos uma morte). No bruto, 7,16% dos acidentes tinham morte; depois dos filtros, **10.240** acidentes (**7,05%**). É minoria: na modelagem, prefira F1, AUC e *class weights* à acurácia.
 
 ### 6.2 Outliers (só sinalizados)
 
@@ -103,93 +106,84 @@ O alvo original `readmitted` tinha 3 classes (`No`, `>30`, `<30`) e 11,16% de `<
 
 | Variável | Q1 | Q3 | Limite superior | Outliers | % outliers | Máximo | Assimetria |
 |---|---|---|---|---|---|---|---|
-| time_in_hospital | 2,00 | 6,00 | 12,00 | 1.403 | 2,01% | 14 | 1,18 |
-| num_lab_procedures | 31,00 | 57,00 | 96,00 | 98 | 0,14% | 132 | -0,22 |
-| num_procedures | 0,00 | 2,00 | 5,00 | 3.845 | 5,50% | 6 | 1,23 |
-| num_medications | 10,00 | 20,00 | 35,00 | 1.867 | 2,67% | 81 | 1,43 |
-| number_outpatient | 0,00 | 0,00 | 0,00 | 9.119 | 13,03% | 42 | 9,70 |
-| number_emergency | 0,00 | 0,00 | 0,00 | 5.100 | 7,29% | 42 | 21,23 |
-| number_inpatient | 0,00 | 0,00 | 0,00 | 8.191 | 11,71% | 12 | 5,59 |
-| number_diagnoses | 6,00 | 9,00 | 13,50 | 235 | 0,34% | 16 | -0,72 |
+| veiculos | 1,00 | 2,00 | 3,50 | 10.446 | 7,19% | 82,00 | 5,36 |
+| km | 75,20 | 406,80 | 904,20 | 1.568 | 1,08% | 1470,00 | 1,01 |
+| idade_media_condutores | 32,00 | 48,00 | 72,00 | 920 | 0,63% | 94,00 | 0,43 |
+| idade_media_veiculos | 6,00 | 15,00 | 28,50 | 2.706 | 1,86% | 75,00 | 1,10 |
 
-8 de 8 variáveis têm outliers pela regra do IQR (de 0,14% a 13,03% das linhas). São pacientes graves plausíveis, então **não removemos nem limitamos**: criamos colunas `*_outlier` (0/1) e deixamos os valores intactos. A cauda é longa (assimetria alta): `log1p` é uma opção para modelos lineares.
+4 de 4 variáveis têm outliers pela regra do IQR (de 0,63% a 7,19% das linhas). São acidentes e veículos reais (um acidente chega a 82 veículos), então **não removemos nem limitamos**: criamos colunas `*_outlier` (0/1) e deixamos os valores intactos.
 
-> **Cuidado ao interpretar:** em 3 variáveis (number_outpatient, number_emergency, number_inpatient) o IQR é zero (a maioria dos pacientes tem 0). Nesses casos, qualquer valor acima de zero já aparece como "outlier" pela regra. Por isso a taxa de outliers dessas colunas é alta e a sinalização é só descritiva.
+### 6.3 Causas (alta cardinalidade)
 
-### 6.3 Diagnósticos (alta cardinalidade)
+![Causas antes e depois](figuras/antes_depois_causas.png)
 
-![Diagnósticos antes e depois](figuras/antes_depois_diagnosticos.png)
+`causa_acidente` tinha **69** causas distintas; viraram **9** grupos (atenção do condutor, velocidade, álcool, manobra, via...). O traçado da via tinha **898** combinações (ex.: `Reta;Declive`) e virou **8** colunas 0/1.
 
-`diag_1` tinha **716** códigos CID-9 distintos; viraram **9** grupos clínicos (mais `Sem_diagnostico`).
+### 6.4 Padrões que já aparecem (descritivo; a Pessoa 2 testa)
 
-### 6.4 Por que `usuario_frequente = 1` a partir de 1 internação prévia
+![Taxa de acidentes fatais por grupo](figuras/taxa_fatal_por_grupo.png)
 
-![Limiar de usuário frequente](figuras/limiar_usuario_frequente.png)
-
-Quem tem ao menos 1 internação prévia (11,71% das linhas) volta em < 30 dias em 15,41% dos casos, contra 8,12% dos demais. O limiar vem da definição clínica ("já internou antes"), **não** de uma busca no alvo; a figura só confirma que faz sentido.
+Só uma prévia, **sem teste estatístico**: a taxa geral de acidentes fatais é 7,05%. Na madrugada é 11,53%, contra 4,87% de manhã. Quando há pedestre envolvido, é 28,04%; com motocicleta, 6,16% (sem moto, 7,74%). Nas causas de álcool, 5,18%. Estes números justificam criar os atributos de faixa horária, causa e envolvidos.
 
 ## 7. Atributos criados (F01–F11)
 
-Todos usam só informação disponível até a alta e **nunca** o alvo. Lista das 10 especialidades mantidas em F11: InternalMedicine, Family/GeneralPractice, Emergency/Trauma, Cardiology, Surgery-General, Orthopedics, Orthopedics-Reconstructive, Radiologist, Nephrology, Pulmonology.
+Todos usam só informação sobre **quem e como** (hora, local, via, envolvidos) e **nunca** a consequência do acidente. O resumo numérico de cada coluna está em `tabelas/atributos_criados.csv`.
 
-| ID | Coluna | Como foi criada | Intuição de negócio | Resumo (calculado) |
-|---|---|---|---|---|
-| F01 | readmit_30d | 1 se readmitted == '<30', senão 0 | É o que queremos prever: voltou ao hospital em menos de 30 dias? | 8,97% das linhas valem 1 |
-| F02 | idade_media | Ponto médio da faixa etária | Idade vira número: modelos entendem 'mais velho = maior risco' sem 10 categorias. | média 65,44 · mín 5,00 · máx 95,00 |
-| F03 | grupo_diag_1 | CID-9 agrupado em 9 grupos clínicos (+ 'Sem_diagnostico') | Centenas de códigos viram grupos que um médico reconhece (circulatório, diabetes...). | mais comum: Circulatorio (30,56%) |
-| F03 | grupo_diag_2 | CID-9 agrupado em 9 grupos clínicos (+ 'Sem_diagnostico') | Centenas de códigos viram grupos que um médico reconhece (circulatório, diabetes...). | mais comum: Circulatorio (31,55%) |
-| F03 | grupo_diag_3 | CID-9 agrupado em 9 grupos clínicos (+ 'Sem_diagnostico') | Centenas de códigos viram grupos que um médico reconhece (circulatório, diabetes...). | mais comum: Circulatorio (29,82%) |
-| F04 | total_visitas_previas | ambulatório + emergência + internações do ano anterior | Resume o quanto o paciente já usa o sistema de saúde. | média 0,56 · mín 0,00 · máx 49,00 |
-| F05 | usuario_frequente | 1 se number_inpatient >= 1 | Candidato a insight: quem já internou antes é alvo de acompanhamento pós-alta. | 11,71% das linhas valem 1 |
-| F06 | n_meds_alterados | Nº de remédios com dose aumentada ou reduzida | Mede a intensidade da mudança de tratamento durante a internação. | média 0,26 · mín 0,00 · máx 4,00 |
-| F07 | n_meds_em_uso | Nº de remédios diferentes de 'No' | Mede a complexidade do tratamento. | média 1,19 · mín 0,00 · máx 6,00 |
-| F08 | a1c_medido | 1 se o exame foi feito | Fazer (ou não) HbA1c e glicose diz algo sobre o cuidado; a HbA1c é o tema do artigo-fonte. | 18,36% das linhas valem 1 |
-| F08 | glicose_medida | 1 se o exame foi feito | Fazer (ou não) HbA1c e glicose diz algo sobre o cuidado; a HbA1c é o tema do artigo-fonte. | 4,78% das linhas valem 1 |
-| F09 | grupo_destino_alta | Casa / Transferencia / Outros / Nao_informado | O destino da alta importa para o risco, sem dezenas de categorias. | mais comum: Casa (75,29%) |
-| F10 | exames_por_dia | exames (ou procedimentos) / dias de internação | Intensidade do cuidado, justa para estadias curtas e longas. | média 14,69 · mín 0,07 · máx 92,00 |
-| F10 | procedimentos_por_dia | exames (ou procedimentos) / dias de internação | Intensidade do cuidado, justa para estadias curtas e longas. | média 0,50 · mín 0,00 · máx 6,00 |
-| F11 | especialidade_agrupada | Top-N especialidades + 'Outras' (+ 'Desconhecido') | As dezenas de especialidades raras viram um grupo só. | mais comum: Desconhecido (48,07%) |
+| ID | Colunas criadas | Como foi criada | Intuição de negócio |
+|---|---|---|---|
+| F01 | `acidente_fatal` | 1 se mortos > 0, senão 0 | É o que queremos prever: o acidente teve morte? |
+| F02 | `hora`, `faixa_horaria` | Hora extraída do horário; faixa Madrugada/Manha/Tarde/Noite | O risco muda ao longo do dia e a faixa deixa o padrão visível para o gestor. |
+| F03 | `mes`, `ano`, `fim_de_semana` | Extraídos da data (fim de semana = sábado ou domingo) | Sazonalidade e rotina de viagem (fim de semana) mudam o tipo de acidente. |
+| F04 | `eh_feriado` | Data comparada ao calendário de feriados nacionais (I02) | Feriados concentram viagens longas e mais risco. |
+| F05 | `regiao` | UF mapeada para região do Brasil (I03) | Compara regiões sem as 27 UFs; mantém o sentido geográfico. |
+| F06 | `grupo_causa` | As 69 causas agrupadas em poucos grupos (atenção, velocidade, álcool, manobra, via...) | Um gestor age sobre grupos de causa, não sobre 69 rótulos. |
+| F07 | `via_reta`, `via_curva`, `via_aclive`, `via_declive`, `via_intersecao`, `via_rotatoria_retorno`, `via_obras_desvio`, `via_ponte_viaduto_tunel` | Traçado composto ('Reta;Declive') separado em colunas 0/1 | Curva, aclive e interseção podem ter risco diferente; juntos viravam centenas de combinações. |
+| F08 | `area_urbana` | 1 quando uso_solo = 'Sim' | Trecho urbano tem perfil de acidente diferente do rural. |
+| F09 | `br` | Código numérico vira categoria ('BR-116') | BR é um nome de rodovia, não uma quantidade. |
+| F10 | `trecho` | Rodovia + faixa de 10 km (ex.: BR-116_km230) | Permite achar trechos críticos (só no interim, por ter muitos níveis). |
+| F11 | `envolve_moto`, `envolve_caminhao`, `envolve_onibus`, `envolve_bicicleta`, `envolve_pedestre`, `idade_media_condutores`, `pct_condutores_homens`, `idade_media_veiculos` | Arquivo de pessoas resumido por acidente (I01) | Quem e o quê se envolveu: moto, caminhão, pedestre, idade do condutor e do veículo. |
 
-Também criamos `payer_code_ausente` e `medical_specialty_ausente` (D06) e as colunas `*_outlier` (subseção "Outliers", na seção 6).
+Também criamos as colunas `*_outlier` (subseção "Outliers", na seção 6) e `contagens_inconsistentes` (só no interim).
 
 ## 8. Cuidados
 
 ### Vazamento de dados
 
-- **Só o 1º encontro por paciente:** evita o mesmo paciente no treino e no teste.
-- **`readmitted` e os IDs ficam fora da base de modelagem:** o primeiro contém a resposta; os outros deixariam o modelo "decorar" linhas.
+- **8 colunas de consequência saem da modelagem** (`mortos`, `feridos_leves`, `feridos_graves`, `ilesos`, `ignorados`, `feridos`, `pessoas` e `classificacao_acidente`). Elas definem o alvo ou só existem depois do acidente. Ficam no interim para rastreio.
 - **Nada de escalonar, codificar ou imputar aqui.** Essas contas aprendem com os dados e precisam ser feitas só no treino, dentro de um `Pipeline` do sklearn (Pessoa 3).
-- Duas escolhas usam **frequência** na base inteira, mas nunca o alvo: a lista das especialidades mais comuns (F11) e a detecção de colunas quase constantes. Os limites do IQR também. Nenhuma dessas usa a resposta, então não há vazamento do alvo; a Pessoa 3 pode recalcular no treino se quiser rigor máximo.
+- Os limites do IQR e a detecção de colunas quase constantes usam frequência na base inteira, mas nunca o alvo; a Pessoa 3 pode recalcular no treino se quiser rigor máximo.
+- **Causa e tipo do acidente só são definidos pela PRF depois do atendimento.** Servem para *explicar* o risco e orientar decisões (onde reforçar o quê), mas um modelo que os use não funcionaria como alerta antes do acidente.
+
+### Nulos que sobram (de propósito)
+
+O plano da equipe fala em base "sem nulos". Na modelagem sobram nulos em **3 colunas** (idade_media_condutores, pct_condutores_homens, idade_media_veiculos): `idade_media_condutores` em 4,82%, `pct_condutores_homens` em 3,47% e `idade_media_veiculos` em 3,82% dos acidentes (sem condutor de idade válida, sexo ou ano de fabricação válido). Preenchê-los com média ou mediana aprende com os dados e, antes do split, vaza informação do teste. **A Pessoa 3 imputa dentro do `Pipeline`** (por exemplo, `SimpleImputer(add_indicator=True)`).
 
 ### Atributos sensíveis
 
-3 colunas da base de modelagem são sensíveis (`race`, `gender`, `idade_media`) e estão marcadas no dicionário. Use-as para **analisar equidade** entre grupos, não para discriminar. `payer_code` pode funcionar como proxy de condição socioeconômica.
+2 colunas da base de modelagem vêm de idade e sexo dos condutores (`idade_media_condutores`, `pct_condutores_homens`) e estão marcadas no dicionário. Use-as para **analisar equidade**, não para discriminar.
 
 ### Limitações dos dados
 
-- Internações de **1999 a 2008**, em hospitais dos EUA: as práticas clínicas mudaram. Recomendamos o **método**, não os números absolutos.
-- Readmissão só é observada quando o paciente volta a um hospital da própria base.
-- Classe positiva rara (8,97%).
+- Só entram acidentes **registrados pela PRF em rodovias federais**; ruas urbanas e rodovias estaduais ficam de fora (viés de registro).
+- Anos de 2024 e 2025. O ano de 2026 existe, mas é parcial e a PRF atualiza o arquivo todo mês; ficou de fora para a análise ser reprodutível.
+- Classe positiva rara (7,05%). Os resultados mostram **associação**, não causa.
 
-### Onde seguimos os dados e não o plano
+### O que verificamos e **não** era problema
 
-| Tema | Plano | O que fizemos | Motivo |
-|---|---|---|---|
-| Ordem dos filtros | D01 → D02 → D03 | D01 → **D03 → D02** | Se o 1º encontro do paciente terminou em óbito/hospice, ele deve sair inteiro. Na ordem do plano, um encontro posterior (que existe em alguns registros) viraria o 'primeiro'. Diferença: 17 pacientes (69.987 na ordem do plano contra 69.970). |
-| Leitura de nulos | `na_values=['?']` | `na_values=['?']` **e** `keep_default_na=False` | Sem isso o pandas trataria `None` como nulo (94,75% de `max_glu_serum`), apagando a informação 'exame não feito'. |
-| Códigos de óbito/hospice | 11, 13, 14, 19, 20, 21 | Conferem com o IDS_mapping: 11, 13, 14, 19, 20, 21 | Lemos a descrição ('Expired' / 'Hospice') no mapeamento. Códigos sem nenhuma linha no bruto: 21. |
-| Destino de alta (F09) | Casa / Transferência / Outros | Casa / Transferencia / Outros / **Nao_informado** | Não misturamos 'não sabemos o destino' com destinos conhecidos. |
-| Grupos de diagnóstico (F03) | 9 grupos | 9 grupos + **Sem_diagnostico** | Ausência de diagnóstico secundário é real (D08) e não pertence a nenhum grupo clínico. |
-| Colunas quase constantes | 'verificar examide e citoglipton' | 11 colunas removidas (>= 99,9% num único valor) | Inclui 11 de 23 medicamentos; ficaram 12. Os contadores F06/F07 foram calculados **antes** da remoção. |
-| Correlação entre numéricas | listar pares com \|r\| > 0,9 | 0 pares acima do limiar | A maior correlação é 0,81 (number_outpatient x total_visitas_previas); nada foi removido por redundância numérica. |
+| Suspeita | O que encontramos |
+|---|---|
+| Latitude positiva é erro | Das 593 latitudes positivas, 593 estão em UFs ao norte do Equador (AP e RR): **são válidas**. Coordenadas anuladas: 0 |
+| Acidentes sem pessoas ou pessoas sem acidente | 0 e 0: o join casa 100% |
+| `id` repetido | Não há: cada `id` aparece uma vez |
+| Rótulos iguais com acento ou caixa diferente (`Céu Claro` x `CEU CLARO`) | 0 casos |
 
 ## 9. O que entregamos para o resto do grupo
 
 | Arquivo | Para quê |
 |---|---|
-| `data/processed/diabetes_modelagem.csv` e `.parquet` | Base final: **69.970 linhas × 54 colunas**, alvo `readmit_30d` na última coluna |
-| `data/processed/dicionario_de_dados.csv` | O que cada coluna significa, tipo (14 numéricas, 23 categóricas, 16 binárias, 1 alvo), origem e se é sensível |
-| `data/interim/diabetes_limpo.csv` | Versão legível, com IDs e as colunas originais úteis (77 colunas) |
+| `data/processed/acidentes_prf_modelagem.csv` e `.parquet` | Base final: **145.342 linhas × 42 colunas**, alvo `acidente_fatal` na última coluna |
+| `data/processed/dicionario_de_dados.csv` | O que cada coluna significa, tipo (10 numéricas, 11 categóricas, 20 binárias, 1 alvo), origem e se é sensível |
+| `data/interim/acidentes_prf_limpo.csv` | Versão legível, com `id`, consequências e `trecho` (63 colunas). Gerada pelo pipeline (não versionada: é grande) |
 | `docs/tabelas/*.csv` | Evidências de cada decisão (auditoria antes/depois) |
 | `docs/figuras/*.png` | Gráficos para o artigo e os slides |
 
@@ -197,11 +191,11 @@ Carregar em 2 linhas:
 
 ```python
 import pandas as pd
-df = pd.read_csv("data/processed/diabetes_modelagem.csv")  # ou pd.read_parquet(...)
-X, y = df.drop(columns="readmit_30d"), df["readmit_30d"]
+df = pd.read_csv("data/processed/acidentes_prf_modelagem.csv")  # ou pd.read_parquet(...)
+X, y = df.drop(columns="acidente_fatal"), df["acidente_fatal"]
 ```
 
-Para a Pessoa 3: as colunas de texto precisam de *one-hot*; `idade_media` e as contagens são numéricas; as colunas `*_outlier` são opcionais; o *split* treino/teste é de vocês (não geramos).
+Para a Pessoa 3: as colunas de texto precisam de *one-hot*; `km`, `veiculos`, `hora` e as idades são numéricas; as colunas `*_outlier` são opcionais; `ano` serve para **validação temporal** (treinar em 2024, testar em 2025) e não como atributo; o *split* treino/teste é de vocês (não geramos).
 
 ## 10. Roteiro de fala (3 minutos) e perguntas da banca
 
@@ -209,25 +203,25 @@ Para a Pessoa 3: as colunas de texto precisam de *one-hot*; `idade_media` e as c
 
 | Tempo | O que dizer |
 |---|---|
-| 0:00–0:20 | Base do UCI: 101.766 internações de diabéticos em 130 hospitais. Objetivo: prever readmissão em < 30 dias. |
-| 0:20–0:50 | Problemas encontrados: `?` espalhado, `weight` quase vazio (96,9%), pacientes repetidos, óbitos e códigos sem nome. |
-| 0:50–1:30 | **Funil:** 101.766 → 69.970. Cortamos 30.248 encontros repetidos (1 por paciente), 1.545 óbitos/hospice e 3 sexos inválidos. |
-| 1:30–2:00 | **Ausentes:** coluna por coluna, sem imputar média. O `None` dos exames não é nulo: é "exame não feito". |
-| 2:00–2:30 | **Atributos novos:** grupos de diagnóstico, idade média, `usuario_frequente` (15,4% de readmissão contra 8,1%), exames medidos. |
-| 2:30–3:00 | **Cuidados:** nada de vazamento, atributos sensíveis marcados, classe positiva só 9,0%. Entrega: base de 69.970 × 54 + dicionário. |
+| 0:00–0:20 | Base da PRF: 145.731 acidentes em rodovias federais (2024–2025), mais um arquivo com 391.077 pessoas/veículos. Objetivo: entender o que leva a um acidente **fatal**. |
+| 0:20–0:50 | Problemas: pessoas em outro arquivo, idade impossível (até 2024 anos), ano de fabricação 0, "não sei" escrito de várias formas e 7.672 acidentes com contagem de vítimas que não fecha. |
+| 0:50–1:30 | **Funil:** 145.731 → 145.342. A base perde pouco: 0 duplicados e 389 suicídios/sinistros pessoais. Mostrar o que **não** era problema (latitude positiva em AP/RR é válida). |
+| 1:30–2:00 | **Integração e inconsistências:** idade, sexo e veículo vêm do arquivo de pessoas; valores impossíveis viram nulo, sem inventar valor. |
+| 2:00–2:30 | **Atributos novos:** hora e faixa do dia, feriado, região, grupo de causa, traçado da via e envolvidos (moto, caminhão, pedestre). Prévia: 11,5% de fatais na madrugada contra 4,9% de manhã. |
+| 2:30–3:00 | **Cuidados:** 8 colunas de consequência fora da modelagem (vazamento), classe positiva só 7,0%. Entrega: base de 145.342 × 42 + dicionário. |
 
 ### 10 perguntas prováveis (resposta curta)
 
-1. **Por que removeu pacientes que morreram ou foram para hospice?** Eles não podem ser readmitidos. Deixá-los faria o alvo ser 0 por um motivo que não tem a ver com o atendimento e subestimaria a readmissão. Foram 1.545 linhas.
-2. **Por que não imputou a média?** Imputar com estatística aprende com os dados; se feito antes do split, vaza informação do teste. Isso fica no `Pipeline` do sklearn (Pessoa 3). Aqui só aplicamos regras fixas do domínio.
-3. **Por que só o primeiro encontro?** Encontros do mesmo paciente não são independentes e o modelo "decoraria" o paciente. Perdemos 30.248 linhas, mas ganhamos métricas honestas.
-4. **Os outliers não atrapalham?** São pacientes graves reais, e removê-los apagaria justamente os de maior risco. Sinalizamos com `*_outlier` e a Pessoa 3 decide, estimando limites só no treino.
-5. **Por que removeu `weight`?** Estava 96,9% ausente. Preencher seria inventar o peso de quase todo mundo.
-6. **O que é o `None` nos exames de glicose e HbA1c?** Significa que o exame não foi feito. Não é dado faltante: virou a categoria `Nao_medido` e as flags `a1c_medido` e `glicose_medida`.
+1. **Por que juntou o arquivo de pessoas?** Idade do condutor, tipo de veículo e pedestre só existem lá, e ajudam a explicar o risco. Resumimos por acidente e juntamos pelo `id`; nenhum dos 145.731 acidentes foi perdido.
+2. **Por que removeu suicídios e sinistros pessoais?** Não são acidentes de trânsito: nenhuma fiscalização, sinalização ou obra os evitaria, e eles inflariam a taxa de fatais. Foram 389 acidentes.
+3. **Por que não imputou a idade que faltava?** Não dá para saber a idade real, e imputar média aprende com os dados (vaza informação do teste se feito antes do split). Deixamos o nulo e a Pessoa 3 imputa dentro do `Pipeline`.
+4. **Por que `mortos` virou alvo e as outras colunas de vítimas saíram?** `mortos` define o alvo; feridos, ilesos e a classificação são consequência do mesmo evento. Usá-los como atributo seria vazamento: o modelo "colaria" a resposta.
+5. **Por que só 2024 e 2025, e não 2026?** 2026 é um ano parcial e a PRF atualiza o arquivo todo mês; ficar com anos completos torna a análise reprodutível e evita viés de sazonalidade.
+6. **Os outliers não atrapalham?** São acidentes reais (um chega a 82 veículos) e estão entre os mais graves. Sinalizamos com `*_outlier` e a Pessoa 3 decide, estimando limites só no treino.
 7. **Por que não escalonou nem fez one-hot?** São transformações que aprendem dos dados (média, categorias) e dependem do split. Ficam no `Pipeline` da Pessoa 3.
-8. **Como garantiu que não há vazamento?** Alvo `readmitted` e IDs fora da base de modelagem, um encontro por paciente, atributos só com informação até a alta e nenhuma estatística do teste.
-9. **Usar raça e sexo é ético?** Estão marcados como sensíveis (3 colunas). Servem para auditar equidade entre grupos, não para discriminar; `Desconhecido` em `race` existe para não perder linhas.
-10. **Dados de 1999–2008 ainda valem?** O método vale, os números absolutos não: as práticas clínicas mudaram. Dizemos isso como limitação do trabalho.
+8. **Como garantiu que não há vazamento?** Consequências fora da base de modelagem, atributos só de hora, local, via e envolvidos, e nenhuma estatística do teste. Reconhecemos que causa e tipo só são conhecidos após o atendimento: o modelo explica risco, não funciona como alerta prévio.
+9. **Usar idade e sexo é ético?** Estão marcados como sensíveis (2 colunas, resumidas por acidente). Servem para auditar equidade, não para discriminar.
+10. **Os dados são representativos?** Só acidentes registrados pela PRF em rodovias federais. Rodovias estaduais e vias urbanas ficam de fora, então os resultados valem para esse recorte.
 
 ## 11. Como reproduzir
 
@@ -236,9 +230,9 @@ python -m venv .venv
 .venv\Scripts\activate            # Linux/Mac: source .venv/bin/activate
 pip install -r requirements.txt
 
-python -m src.p1_engenharia_dados.baixar_base          # baixa a base para data/raw/
+python -m src.p1_engenharia_dados.baixar_base          # baixa os 4 arquivos da PRF para data/raw/
 python -m src.p1_engenharia_dados.executar_pipeline    # refaz TUDO (dados, tabelas, figuras, textos)
-pytest tests/test_pipeline_p1.py                       # confere as regras
+pytest                                                 # confere as regras
 python -m pydoc src.p1_engenharia_dados.limpeza        # documentação das funções
 ```
 
