@@ -6,7 +6,7 @@ número solto no meio do código: se uma decisão depende de um valor, ele mora
 neste arquivo, com um comentário dizendo de onde veio.
 
 Os IDs (D01..D09 e F01..F11) citados nos comentários são os mesmos de
-``docs/PLANO_IMPLEMENTACAO_PESSOA1.md`` e ``docs/README.md``.
+``docs/PLANO_IMPLEMENTACAO_ENGENHARIA_DE_DADOS.md`` e ``docs/README.md``.
 """
 
 from __future__ import annotations

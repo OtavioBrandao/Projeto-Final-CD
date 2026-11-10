@@ -1,6 +1,6 @@
 # Pessoa 1 — Engenharia de Dados e Pré-processamento
 Responsável: Pessoa 1. Entrega: dataset limpo (data/processed) + documentação em docs/ + seção 'Base de Dados' do artigo.
-Plano detalhado: docs/PLANO_IMPLEMENTACAO_PESSOA1.md · Explicação para estudo/apresentação: docs/README.md
+Plano detalhado: docs/PLANO_IMPLEMENTACAO_ENGENHARIA_DE_DADOS.md · Explicação para estudo/apresentação: docs/README.md
 
 Um comando refaz tudo (dados, tabelas, figuras e textos):
 

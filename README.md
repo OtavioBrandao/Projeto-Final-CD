@@ -64,7 +64,7 @@ python -m src.p1_engenharia_dados.executar_pipeline   # refaz o tratamento (dado
 pytest                                                # testes do pipeline
 ```
 
-O pipeline de tratamento (Pessoa 1) está especificado em [`docs/PLANO_IMPLEMENTACAO_PESSOA1.md`](docs/PLANO_IMPLEMENTACAO_PESSOA1.md) e explicado, com números e gráficos, em [`docs/README.md`](docs/README.md).
+O pipeline de tratamento (Pessoa 1) está especificado em [`docs/PLANO_IMPLEMENTACAO_ENGENHARIA_DE_DADOS.md`](docs/PLANO_IMPLEMENTACAO_ENGENHARIA_DE_DADOS.md) e explicado, com números e gráficos, em [`docs/README.md`](docs/README.md).
 
 **Para as demais pessoas:** a base pronta para usar está em `data/processed/diabetes_modelagem.csv` (ou `.parquet`), com o dicionário em `data/processed/dicionario_de_dados.csv`. O alvo é `readmit_30d` (última coluna). Não há divisão treino/teste nem escalonamento/one-hot: isso é da Pessoa 3, dentro de um `Pipeline` do sklearn.
 

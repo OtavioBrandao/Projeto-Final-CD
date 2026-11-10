@@ -1,6 +1,4 @@
-# Plano de implementação — Pessoa 1 (Engenharia de Dados e Pré-processamento)
-
-> **Para o Claude Code.** Este arquivo é a especificação completa. Leia também `README.md` e `docs/ESCOLHA_DA_BASE.md`. Execute as etapas na ordem, rode o pipeline de verdade e **nunca escreva um número no texto que não tenha vindo do código**.
+# Plano de Implementação — Engenharia de Dados e Pré-processamento
 
 ## 1. Objetivo e entregáveis
 
