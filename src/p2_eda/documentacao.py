@@ -424,7 +424,7 @@ def readme_eda(t: dict[str, pd.DataFrame]) -> str:
     blocos_fig = "\n\n".join(f"#### {i}. {desc} *({tipo})*\n\n![{nome}](figuras/{nome}.png)"
                              for i, (nome, desc, tipo) in enumerate(figs, 1))  # fmt: skip
 
-    return f"""# README — Análise Exploratória (EDA) e Estatística (Pessoa 2)
+    return f"""# README — Análise Exploratória (EDA) e Estatística
 
 > README **da parte de EDA e Estatística**. É **gerado por código** (`python -m src.p2_eda.executar_eda`) e todos os números vêm de [`tabelas/`](tabelas/). Não edite à mão: rode de novo.
 > A seção do artigo está em [`secao_estatistica_descritiva_inferencia.md`](secao_estatistica_descritiva_inferencia.md) (revisão) e [`.tex`](secao_estatistica_descritiva_inferencia.tex) (para o template SBC).
@@ -447,7 +447,7 @@ pytest tests/test_eda_p2.py         # testes das funções estatísticas e das s
 
 Notebook para navegar pelos resultados: [`notebooks/p2_eda.ipynb`](../notebooks/p2_eda.ipynb).
 
-## 3. Por que esses métodos (a pergunta que a banca faz)
+## 3. Por que esses métodos
 
 | Escolha | Por quê | Alternativa descartada |
 |---|---|---|
