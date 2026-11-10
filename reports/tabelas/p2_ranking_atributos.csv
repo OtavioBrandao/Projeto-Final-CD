@@ -1,0 +1,42 @@
+posicao,atributo,v_cramer,magnitude,n_categorias_teste,observacao
+1,tipo_acidente,0.305111,médio,16,"Pós-evento (definido pela PRF no atendimento): ótimo para explicar, não para alertar antes."
+2,grupo_causa,0.178312,pequeno,9,"Pós-evento (definido pela PRF no atendimento): ótimo para explicar, não para alertar antes."
+3,envolve_pedestre,0.172512,pequeno,2,
+4,veiculos,0.132339,pequeno,9,
+5,uf,0.121054,pequeno,27,Alta cardinalidade (27): considerar target encoding dentro do CV ou usar 'regiao'.
+6,envolve_caminhao,0.119303,pequeno,2,
+7,br,0.114239,pequeno,65,"Alta cardinalidade: target encoding dentro do CV, ou deixar de fora."
+8,tipo_pista,0.102875,pequeno,3,
+9,hora,0.102361,pequeno,24,Relação não linear (pico na madrugada): usar faixa_horaria ou codificação cíclica.
+10,fase_dia,0.097509,desprezível,4,Redundante com faixa_horaria/hora; escolher uma das três.
+11,faixa_horaria,0.095981,desprezível,4,
+12,veiculos_outlier,0.090047,desprezível,2,
+13,area_urbana,0.088631,desprezível,2,
+14,latitude,0.085297,desprezível,5,Associação vem da geografia (Norte/Nordeste); redundante com uf/regiao.
+15,regiao,0.084801,desprezível,5,
+16,pct_condutores_homens,0.064168,desprezível,3,Sensível: usar com cautela e auditar equidade. Imputar no Pipeline.
+17,idade_media_veiculos,0.054313,desprezível,6,Imputar no Pipeline (nulos).
+18,idade_media_condutores,0.044773,desprezível,6,Sensível: usar com cautela e auditar equidade. Imputar no Pipeline.
+19,via_intersecao,0.039840,desprezível,2,
+20,via_rotatoria_retorno,0.039755,desprezível,2,
+21,via_declive,0.036948,desprezível,2,
+22,dia_semana,0.036164,desprezível,7,
+23,longitude,0.035608,desprezível,5,Associação vem da geografia (Norte/Nordeste); redundante com uf/regiao.
+24,fim_de_semana,0.035067,desprezível,2,
+25,envolve_bicicleta,0.033043,desprezível,2,
+26,condicao_metereologica,0.031422,desprezível,9,
+27,envolve_onibus,0.031356,desprezível,2,
+28,envolve_moto,0.030792,desprezível,2,
+29,km,0.026515,desprezível,5,
+30,via_curva,0.022188,desprezível,2,
+31,via_aclive,0.018803,desprezível,2,
+32,sentido_via,0.015847,desprezível,3,
+33,km_outlier,0.015492,desprezível,2,
+34,mes,0.013984,desprezível,12,
+35,via_reta,0.008596,desprezível,2,
+36,via_obras_desvio,0.006722,desprezível,2,
+37,eh_feriado,0.004747,desprezível,2,
+38,idade_media_condutores_outlier,0.004130,desprezível,2,
+39,via_ponte_viaduto_tunel,0.002983,desprezível,2,
+40,idade_media_veiculos_outlier,0.002715,desprezível,2,
+41,ano,0.000409,desprezível,2,"Não usar como atributo: reservado para validação temporal (2024 treino, 2025 teste)."

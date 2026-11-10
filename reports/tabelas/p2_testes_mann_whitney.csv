@@ -1,0 +1,5 @@
+hipotese,variavel,n_fatal,n_nao_fatal,mediana_fatal,mediana_nao_fatal,media_fatal,media_nao_fatal,u,p_valor,r_rank_bisserial,magnitude,p_holm,significativo
+H8,veiculos,10240,135102,2.000000,2.000000,2.495898,1.952369,871892064.500000,0.000000,0.260466,pequeno,0.000000,True
+H8,idade_media_condutores,9577,128756,41.500000,39.666700,42.162149,40.395950,673036851.500000,0.000000,0.091621,desprezível,0.000000,True
+H8,idade_media_veiculos,9508,130289,11.000000,10.000000,11.386577,10.835579,653718548.500000,0.000000,0.055417,desprezível,0.000000,True
+H8,pct_condutores_homens,9670,130635,100.000000,100.000000,94.143943,87.814443,688031974.500000,0.000000,0.089313,desprezível,0.000000,True

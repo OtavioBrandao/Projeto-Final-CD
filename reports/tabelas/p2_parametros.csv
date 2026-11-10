@@ -1,0 +1,5 @@
+parametro,valor
+alfa,0.050000
+confianca,0.950000
+n_testes_familia_holm,30.000000
+n_minimo_grupo,200.000000
