@@ -1,14 +1,18 @@
-# Pessoa 3 — Etapa 01: contrato de dados e divisão temporal
+# Pessoa 3 — Etapas 01 e 02: contrato temporal e pipelines de classificação
 
 Esta etapa prepara a classificação binária de **acidentes registrados** como
 fatais ou não fatais. O alvo `acidente_fatal` é inteiro: 1 quando há pelo menos
 uma morte, 0 caso contrário. Sua origem foi conferida em
 `p1_engenharia_dados/engenharia_atributos.py`: `(mortos > 0)`.
 
-Não há treinamento, imputação, codificação, escalonamento, seleção de limiares
-ou métricas de modelos nesta entrega. A entrada é o CSV versionado em
+Na Etapa 01 não houve treinamento ou transformação aprendida. A Etapa 02,
+documentada ao final, acrescenta pipelines e testes funcionais pequenos,
+sem experimentos comparativos definitivos. A entrada é o CSV versionado em
 `data/processed/acidentes_prf_modelagem.csv`; a base e os códigos das Pessoas 1
 e 2 não são modificados.
+
+As listas e divisões da Etapa 01 continuam inalteradas. A documentação abaixo
+registra aquela entrega; a seção **Etapa 02** descreve as novas fábricas.
 
 ## Cenários e listas explícitas
 
@@ -276,3 +280,161 @@ Resultados reais em 11/11/2026: **45 testes da Pessoa 3 aprovados em 5,12 s**;
 **96 testes da suíte completa aprovados em 76,93 s**, incluindo os 31 da Pessoa 1
 e os 20 da Pessoa 2. Nenhuma falha ou teste ignorado. Os dados brutos necessários
 à suíte da Pessoa 1 estavam presentes. Python 3.12, pandas 3.0.0 e pytest 9.1.1.
+
+## Etapa 02 — Pré-processamento e modelos
+
+`preprocessamento.py` e `modelos.py` criam objetos novos e **não ajustados**.
+Não leem dados, não escolhem divisões, não executam experimentos na importação
+e não exportam modelos. Reutilizam o contrato de `configuracao.py`; a seleção
+e as divisões continuam sendo responsabilidade das interfaces de `dados.py`.
+
+### Partição e transformações
+
+| Cenário | Numéricas | Categóricas | Binárias | Total |
+|---|---:|---:|---:|---:|
+| A | 7 | 11 | 16 | 34 |
+| B | 5 | 5 | 2 | 12 |
+
+`identificar_tipos(cenario)` cruza as listas semânticas do contrato com uma
+lista explícita de numéricas: `km`, `veiculos`, `latitude`, `longitude`,
+`idade_media_veiculos`, `hora`, `mes`. Rejeita atributos sem tipo, ambiguidade,
+duplicações e preditores proibidos. Cada feature deve pertencer a um único
+grupo. Mês/hora continuam numéricos; não há engenharia nova.
+
+`criar_preprocessamento(cenario, escalonar=False)` retorna um `ColumnTransformer`:
+
+- Numéricas: `SimpleImputer(strategy="median", keep_empty_features=True)`.
+  Se uma coluna estiver inteiramente ausente no treino, permanece na matriz
+  com preenchimento zero, comportamento do imputador. A Regressão Logística
+  acrescenta `StandardScaler`; Dummy e árvores não recebem escalonamento.
+- Categóricas: conversão textual sem aprendizado, incluindo `br`, normalização
+  de `None`/`pd.NA`/`NaN`, imputação constante `__ausente__` e
+  `OneHotEncoder(handle_unknown="ignore", sparse_output=True)`. Categorias
+  inéditas geram zeros no bloco correspondente, sem mudar a dimensionalidade.
+  `Nao_informado` continua sendo uma categoria observada.
+- Binárias: passagem direta dos valores 0/1 validados por `selecionar_xy`;
+  não há imputação, One-Hot ou escalonamento redundante nesse grupo.
+
+O `ColumnTransformer` usa seletores explícitos e `remainder="drop"`: extras
+não entram na matriz do estimador; para validar a base, use sempre
+`selecionar_xy`. Features obrigatórias ausentes geram erro. O parâmetro
+`sparse_threshold=1.0` evita densificação quando a densidade estimada é menor
+que 1. Uma entrada pequena com uma única categoria em cada coluna pode resultar
+em saída densa. As oito combinações reais testadas produziram matrizes esparsas.
+
+### Fábricas e configurações iniciais
+
+Use `criar_estimador(algoritmo)` ou, preferencialmente,
+`criar_pipeline(cenario, algoritmo)`. Os nomes aceitos estão em `ALGORITMOS`:
+
+| Algoritmo | Configuração inicial |
+|---|---|
+| `dummy` | `DummyClassifier(strategy="prior")`; probabilidades = proporções do treino. |
+| `regressao_logistica` | `LogisticRegression(max_iter=2000, random_state=42)`; solver e regularização padrão (`lbfgs`, L2, C=1). |
+| `random_forest` | 100 árvores, profundidade máxima 12, mínimo de 3 amostras por folha, `n_jobs=2`, `random_state=42`. |
+| `xgboost` | `binary:logistic`, `logloss`, `tree_method="hist"`, `device="cpu"`, 100 árvores, profundidade 4, taxa 0,1, `n_jobs=2`, `random_state=42`. |
+
+Pesos de classe e limiares permanecem nos padrões; não há busca ou escolha
+automática de vencedor. O XGBoost é importado apenas ao ser solicitado. Se não
+estiver disponível, a fábrica emite `ImportError` com instrução de instalação;
+os outros três algoritmos continuam disponíveis, sem substituição simulada.
+
+### Uso com a divisão da Etapa 01
+
+O exemplo abaixo mostra **uma** janela. Não é executado automaticamente e não
+autoriza treinar em toda a base ou avaliar 2025 nesta entrega.
+
+```python
+import numpy as np
+from src.p3_modelagem.dados import (
+    carregar_base, separar_desenvolvimento_teste,
+    gerar_cortes_temporais, selecionar_xy,
+)
+from src.p3_modelagem.modelos import criar_pipeline
+
+base = carregar_base()
+desenvolvimento, teste_final = separar_desenvolvimento_teste(base)
+corte = gerar_cortes_temporais(desenvolvimento)[0]
+X, y = selecionar_xy(desenvolvimento, "B")
+pipeline = criar_pipeline("B", "regressao_logistica")
+pipeline.fit(X.loc[corte.treino], y.loc[corte.treino])
+classes = pipeline.predict(X.loc[corte.validacao])
+indice_positivo = np.flatnonzero(pipeline.classes_ == 1).item()
+p_fatal = pipeline.predict_proba(X.loc[corte.validacao])[:, indice_positivo]
+# teste_final continua reservado; use um pipeline novo em cada futuro treino.
+```
+
+Com as duas classes no treino, `classes_` é `[0, 1]` e a coluna 1 corresponde
+a `P(acidente_fatal=1)`. O treino deve conter ambas as classes, como nos testes.
+O pipeline não recebe `ano` como feature e não pode deduzir o período sozinho:
+cabe ao chamador usar os cortes. Imputadores, vocabulários e escalonadores são
+aprendidos no `fit` desse treino; `predict`/`predict_proba` apenas transformam.
+
+### Ambiente e reprodução dos testes
+
+Em 11/11/2026 foi criado `.venv` local, ignorado pelo Git, com acesso às
+dependências Python 3.12 já existentes (`--system-site-packages`). XGBoost não
+estava instalado; a primeira tentativa de download foi bloqueada pela rede
+do sandbox. A instalação autorizada fora do sandbox concluiu com XGBoost
+3.4.1 **somente nesse ambiente virtual**. Nenhuma dependência global ou arquivo
+`requirements.txt` foi alterado. Versões usadas: numpy 2.4.2, pandas 3.0.0,
+scipy 1.17.0 e scikit-learn 1.7.2.
+
+```powershell
+# Para recriar em outro ambiente: instalar requirements.txt no venv escolhido.
+& '.venv/Scripts/python.exe' -m pytest tests/test_modelos_p3.py -q -s
+& '.venv/Scripts/python.exe' -m pytest -q
+```
+
+Os 38 testes novos verificam ajuste e inferência para os quatro algoritmos
+em A/B, cenários inválidos, partição exata das features, exclusão de alvo/ano,
+mediana conhecida (3), média escalonada conhecida (3,8), categorias inéditas,
+nulos textuais/numéricos, coluna inteiramente ausente no treino, binários
+inalterados, saída esparsa, probabilidade positiva, prevalência conhecida do
+Dummy (0,2), sinal conhecido para os demais algoritmos, determinismo e ausência
+de mutação das entradas. A indisponibilidade do XGBoost é simulada apenas para
+testar o erro e a independência dos outros modelos.
+
+Resultados em 11/11/2026: execução isolada da Etapa 02 com **38 aprovados em
+9,00 s**; última execução da suíte completa, após a revisão dos testes, com
+**134 aprovados em 65,97 s** (96 anteriores + 38 novos). Nenhuma falha ou teste
+ignorado. `git diff --check` também passou.
+
+As sentinelas de validação (`longitude=1e9`, categoria exclusiva) não alteram
+medianas ou vocabulários. Mudar atributos e alvos sintéticos de 2025 não muda
+os dados de desenvolvimento nem as probabilidades dos modelos. Estimadores
+novos rejeitam previsão antes de `fit`. Na Random Forest, as árvores e classes
+previstas são idênticas; probabilidades admitem tolerância absoluta de `1e-14`
+pela ordem da soma paralela (diferenças observadas da ordem de `1e-16`).
+
+### Verificação funcional com dados reais de 2024
+
+`test_integracao_real_2024` reutiliza carga, separação, cortes e seleção da
+Etapa 01. Usa somente a primeira janela: amostra aleatória fixa de **384**
+registros de janeiro–junho para treino e **128** de julho–agosto para inferência.
+Não há balanceamento; o treino contém **355 não fatais e 29 fatais**. As duas
+classes estão presentes também na validação. Nenhum registro real de 2025
+entra no treinamento, transformação aprendida ou inferência desta verificação.
+
+As oito combinações algoritmo/cenário treinaram e produziram previsões e
+probabilidades válidas. Em A, a amostra de treino tem 15 valores ausentes;
+em B, zero. As matrizes transformadas da validação têm **128 × 168** em A e
+**128 × 110** em B, todas esparsas. Na execução isolada, cada combinação levou
+aproximadamente **0,04–0,23 s** (fit, inferência e verificações). Não houve
+aviso de convergência ou falha de tipos, dimensionalidade ou memória. O pico
+de memória não foi medido; a amostra não comprova custo no conjunto completo.
+
+Não foram calculadas métricas comparativas ou ajustados hiperparâmetros a
+partir desses resultados. Os testes descartam seus objetos ao terminar;
+nenhum modelo definitivo é exportado. A suíte anterior ainda faz a auditoria
+descritiva de 2025 documentada na Etapa 01, sem treinamento nesse ano.
+
+### Limite da entrega
+
+A Etapa 03 recebe pipelines novos por cenário/algoritmo, compatíveis com os
+mesmos cortes temporais e aptos a produzir classes e probabilidades. Não foram
+executadas validação comparativa completa, otimização, balanceamento, ajuste
+de limiares, seleção de vencedor, avaliação final em 2025, curvas ou matrizes
+finais, SHAP ou dashboard. O contrato anterior e as limitações metodológicas
+acima permanecem vigentes. Esta entrega permanece local em `p3/modelagem`,
+sem commit, push, PR, merge ou rebase.
