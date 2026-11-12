@@ -4,7 +4,7 @@ Relatório gerado por `python -m src.p3_modelagem.executar_validacao`.
 
 ## Protocolo e rastreabilidade
 
-CSV: `\data\processed\acidentes_prf_modelagem.csv`;
+CSV: `data/processed/acidentes_prf_modelagem.csv`; SHA-256: `518f7d54e8f0093befd41939b47117344ee2983ab977d47124794c3212f05552`.
 
 Desenvolvimento completo: 73006 registros de 2024. Semente: 42.
 

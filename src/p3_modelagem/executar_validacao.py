@@ -33,6 +33,14 @@ def sha256(caminho: Path) -> str:
         return hashlib.file_digest(arquivo, "sha256").hexdigest()
 
 
+def referencia_publica(caminho: Path) -> str:
+    """Referência portátil; fontes externas são identificadas só pelo nome/hash."""
+    try:
+        return caminho.resolve().relative_to(cfg.RAIZ_REPOSITORIO.resolve()).as_posix()
+    except ValueError:
+        return caminho.name
+
+
 def configurar_variante(pipeline, algoritmo: str, variante: str, y_treino: pd.Series) -> dict:
     if variante not in ("padrao", "ponderado"):
         raise ValueError("Variante desconhecida.")
@@ -218,7 +226,7 @@ def gerar_relatorio(resultados, resumo, globais, limiares, metadados, destino):
         "# Pessoa 3 — Etapa 03: validação temporal de 2024", "",
         "Relatório gerado por `python -m src.p3_modelagem.executar_validacao`.", "",
         "## Protocolo e rastreabilidade", "",
-        f"CSV: `{metadados['csv']}`; SHA-256: `{metadados['csv_sha256']}`.",
+        f"CSV: `{referencia_publica(Path(metadados.get('csv', cfg.CSV_MODELAGEM)))}`; SHA-256: `{metadados['csv_sha256']}`.",
         f"Desenvolvimento completo: {metadados['n_desenvolvimento']} registros de 2024. Semente: {SEMENTE}.",
         "O carregador existente lê e valida o contrato do CSV completo; a separação existente isola 2024. "
         "O objeto reservado de 2025 é descartado antes dos experimentos, sem inferência, métricas, seleção ou inspeção de resultados de 2025.",
@@ -361,7 +369,7 @@ def main():
         base = carregar_base(args.csv)
         desenvolvimento, reservado = separar_desenvolvimento_teste(base)
         del reservado, base
-        metadados = {"csv": str(args.csv.resolve()), "csv_sha256": hash_antes,
+        metadados = {"csv": referencia_publica(args.csv), "csv_sha256": hash_antes,
                      "ano_experimentos": 2024, "teste_final_avaliado": False,
                      "n_desenvolvimento": len(desenvolvimento), "semente": SEMENTE,
                      "python": platform.python_version(),
