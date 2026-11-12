@@ -271,11 +271,6 @@ dicionário e cortes. Nenhum teste modifica arquivos das Pessoas 1 e 2.
 No ambiente Windows desta execução, o alias `python` da Microsoft Store não
 funcionou. Os comandos reais usam o executável Python 3.12 instalado:
 
-```powershell
-& 'C:/Users/victo/AppData/Local/Programs/Python/Python312/python.exe' -m pytest tests/test_modelagem_p3.py -q
-& 'C:/Users/victo/AppData/Local/Programs/Python/Python312/python.exe' -m pytest -q
-```
-
 Resultados reais em 11/11/2026: **45 testes da Pessoa 3 aprovados em 5,12 s**;
 **96 testes da suíte completa aprovados em 76,93 s**, incluindo os 31 da Pessoa 1
 e os 20 da Pessoa 2. Nenhuma falha ou teste ignorado. Os dados brutos necessários
