@@ -1,12 +1,14 @@
-"""Contrato fixo da Etapa 01; nenhuma seleção depende do alvo ou de 2025."""
+"""Features, regras de dados e decisões da modelagem selecionadas em 2024."""
 
 from pathlib import Path
+from types import MappingProxyType
 
 RAIZ_REPOSITORIO = Path(__file__).resolve().parents[2]
 CSV_MODELAGEM = RAIZ_REPOSITORIO / "data/processed/acidentes_prf_modelagem.csv"
 COLUNA_ALVO = "acidente_fatal"
 ANO_DESENVOLVIMENTO = 2024
 ANO_TESTE_FINAL = 2025
+LIMIARES = MappingProxyType({"A": 0.2066718339920044, "B": 0.101788230240345})
 
 # Listas deliberadamente explícitas. B não utiliza estados da via apenas
 # observados no boletim. Idade/sexo dos condutores ficam para análise de equidade.

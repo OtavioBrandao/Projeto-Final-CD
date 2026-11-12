@@ -1,4 +1,4 @@
-"""Transformações da Etapa 02, aprendidas somente no fit do treino recebido."""
+"""Transformações aprendidas somente no fit do treino recebido."""
 
 import numpy as np
 from sklearn.compose import ColumnTransformer
@@ -9,7 +9,7 @@ from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardSc
 from src.p3_modelagem import configuracao as cfg
 
 
-# Tipos semânticos do contrato da Etapa 01, sem inferência a partir dos dados.
+# Tipos definidos pelo esquema da base.
 COLUNAS_NUMERICAS = (
     "km", "veiculos", "latitude", "longitude", "idade_media_veiculos", "hora", "mes",
 )

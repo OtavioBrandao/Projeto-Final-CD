@@ -1,7 +1,6 @@
-"""Comportamento dos pipelines A/B; smoke test sem métricas ou seleção."""
+"""Comportamento dos pipelines A/B com dados sintéticos."""
 
 import builtins
-import time
 import warnings
 
 import numpy as np
@@ -13,7 +12,7 @@ from sklearn.exceptions import ConvergenceWarning, NotFittedError
 
 from src.p3_modelagem import configuracao as cfg
 from src.p3_modelagem.dados import (
-    carregar_base, gerar_cortes_temporais, selecionar_xy, separar_desenvolvimento_teste,
+    gerar_cortes_temporais, selecionar_xy, separar_desenvolvimento_teste,
 )
 from src.p3_modelagem.modelos import ALGORITMOS, criar_estimador, criar_pipeline
 from src.p3_modelagem.preprocessamento import criar_preprocessamento, identificar_tipos
@@ -253,44 +252,3 @@ def test_xgboost_ausente_nao_impede_outros_algoritmos(monkeypatch):
         criar_estimador("xgboost")
     for algoritmo in ALGORITMOS[:-1]:
         assert criar_pipeline("A", algoritmo).named_steps["modelo"] is not None
-
-
-@pytest.fixture(scope="module")
-def amostras_reais_2024():
-    base = carregar_base()
-    dev, _ = separar_desenvolvimento_teste(base)
-    corte = gerar_cortes_temporais(dev)[0]
-    # Apenas a primeira janela; sorteio funcional pequeno, sem balanceamento.
-    treino = dev.loc[corte.treino].sample(n=384, random_state=42)
-    validacao = dev.loc[corte.validacao].sample(n=128, random_state=42)
-    assert treino["ano"].eq(2024).all() and validacao["ano"].eq(2024).all()
-    assert treino["mes"].max() < validacao["mes"].min()
-    assert treino.index.intersection(validacao.index).empty
-    assert set(treino["acidente_fatal"]) == set(validacao["acidente_fatal"]) == {0, 1}
-    return treino, validacao
-
-
-@pytest.mark.parametrize("cenario", ["A", "B"])
-@pytest.mark.parametrize("algoritmo", ALGORITMOS)
-def test_integracao_real_2024(amostras_reais_2024, cenario, algoritmo):
-    treino, validacao = amostras_reais_2024
-    antes_t, antes_v = treino.copy(deep=True), validacao.copy(deep=True)
-    xt, yt = selecionar_xy(treino, cenario)
-    xv, _ = selecionar_xy(validacao, cenario)
-    pipeline = criar_pipeline(cenario, algoritmo)
-    inicio = time.perf_counter()
-    with warnings.catch_warnings():
-        warnings.simplefilter("error", ConvergenceWarning)
-        pipeline.fit(xt, yt)
-    validar_saidas(pipeline, xv)
-    matriz = pipeline.named_steps["preprocessamento"].transform(xv)
-    assert sparse.issparse(matriz)
-    assert np.isfinite(matriz.data).all()
-    assert_frame_equal(treino, antes_t)
-    assert_frame_equal(validacao, antes_v)
-    print(
-        f"\nSMOKE 2024: {cenario}/{algoritmo}; treino={len(xt)} "
-        f"classes={yt.value_counts().sort_index().to_dict()}; validacao={len(xv)}; "
-        f"nulos_treino={int(xt.isna().sum().sum())}; matriz={matriz.shape}; "
-        f"esparsa={sparse.issparse(matriz)}; segundos={time.perf_counter() - inicio:.3f}"
-    )

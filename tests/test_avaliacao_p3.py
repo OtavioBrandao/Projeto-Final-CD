@@ -1,7 +1,6 @@
-"""Etapa 03: referências analíticas e integração temporal completa sintética."""
+"""Métricas e validação temporal com dados sintéticos."""
 
 import hashlib
-import json
 import numpy as np
 import pandas as pd
 import pytest
@@ -16,6 +15,10 @@ from src.p3_modelagem.avaliacao import (
 )
 from src.p3_modelagem.dados import gerar_cortes_temporais
 from src.p3_modelagem.modelos import criar_pipeline
+
+
+def sha256(caminho):
+    return hashlib.sha256(caminho.read_bytes()).hexdigest()
 
 
 def series(y=(0, 0, 1, 1), p=(.1, .4, .35, .8)):
@@ -191,28 +194,27 @@ def test_executor_reutiliza_cortes_alinhamento_pesos_e_sem_vazamento(desenvolvim
 
     monkeypatch.setattr(ev, "gerar_cortes_temporais", gerar)
     monkeypatch.setattr(ev, "criar_pipeline", fabrica)
-    resultados, previsoes, meta = ev.executar_experimentos(desenvolvimento)
+    resultados, previsoes = ev.executar_experimentos(desenvolvimento)
     assert len(chamadas) == 1 and len(modelos) == len({id(m) for m in modelos}) == 42
     assert len(resultados) == 42 and len(previsoes) == 14 * 36
     assert resultados.query("variante == 'padrao'").shape[0] == 24
     assert resultados.query("variante == 'ponderado'").shape[0] == 18
     assert previsoes.ano.eq(2024).all()
-    assert {e["status"] for e in meta["execucoes"]} == {"concluido"}
-    for experimento, ajuste in zip(meta["execucoes"], ajustes, strict=True):
+    for experimento, ajuste in zip(resultados.to_dict("records"), ajustes, strict=True):
         corte = cortes[experimento["rodada"] - 1]
         assert ajuste[2].equals(corte.treino)
         parte = previsoes.loc[np.logical_and.reduce([previsoes[k].eq(experimento[k]) for k in [*CHAVES, "rodada"]])]
         assert parte.linha_original.tolist() == corte.validacao.tolist()
         assert parte.y_real.tolist() == desenvolvimento.loc[corte.validacao, "acidente_fatal"].tolist()
         if experimento["variante"] == "ponderado" and experimento["algoritmo"] == "xgboost":
-            assert experimento["ponderacao"]["scale_pos_weight"] == 5.
+            assert ajuste[4]["scale_pos_weight"] == 5.
     assert_frame_equal(antes, desenvolvimento)
 
 
 def test_reprodutibilidade_com_semente_fixa(desenvolvimento, monkeypatch):
     monkeypatch.setattr(ev, "ALGORITMOS", ("dummy", "regressao_logistica", "xgboost", "random_forest"))
-    a, pa, _ = ev.executar_experimentos(desenvolvimento, ponderados=False)
-    b, pb, _ = ev.executar_experimentos(desenvolvimento, ponderados=False)
+    a, pa = ev.executar_experimentos(desenvolvimento, ponderados=False)
+    b, pb = ev.executar_experimentos(desenvolvimento, ponderados=False)
     assert_frame_equal(pa, pb, atol=1e-14, rtol=0)
     assert_frame_equal(a.drop(columns=["tempo_treino_s", "tempo_inferencia_s"]),
                        b.drop(columns=["tempo_treino_s", "tempo_inferencia_s"]), atol=1e-14, rtol=0)
@@ -241,7 +243,7 @@ def test_guardas_rejeitam_cortes_adulterados(desenvolvimento):
         ev.validar_cortes(desenvolvimento, cortes)
 
 
-def test_falhas_ficam_documentadas(desenvolvimento, monkeypatch):
+def test_falhas_interrompem_o_experimento(desenvolvimento, monkeypatch):
     original = ev.criar_pipeline
 
     def fabrica(cenario, algoritmo):
@@ -251,10 +253,8 @@ def test_falhas_ficam_documentadas(desenvolvimento, monkeypatch):
 
     monkeypatch.setattr(ev, "ALGORITMOS", ("dummy",))
     monkeypatch.setattr(ev, "criar_pipeline", fabrica)
-    resultados, _, meta = ev.executar_experimentos(desenvolvimento, ponderados=False)
-    assert len(resultados) == 3
-    falhas = [e for e in meta["execucoes"] if e["status"] == "falha"]
-    assert len(falhas) == 3 and all("falha sintética" in e["erro"] for e in falhas)
+    with pytest.raises(RuntimeError, match="falha sintética"):
+        ev.executar_experimentos(desenvolvimento, ponderados=False)
 
 
 def test_resumo_distingue_media_e_global():
@@ -281,14 +281,13 @@ def test_arquivos_de_saida_e_protecao_p1_p2(desenvolvimento, monkeypatch, tmp_pa
     protegidos = [p for pasta in ("data", "src/p1_engenharia_dados", "src/p2_eda")
                   for p in (cfg.RAIZ_REPOSITORIO / pasta).rglob("*")
                   if p.is_file() and "__pycache__" not in p.parts]
-    antes = {str(p): ev.sha256(p) for p in protegidos}
+    antes = {str(p): sha256(p) for p in protegidos}
     monkeypatch.setattr(ev, "ALGORITMOS", ("dummy",))
-    resultados, previsoes, meta = ev.executar_experimentos(desenvolvimento, ponderados=False)
-    meta.update(csv="sintetico.csv", csv_sha256="sintetico", n_desenvolvimento=len(desenvolvimento))
-    ev.salvar_relatorios(resultados, previsoes, meta, tmp_path)
+    resultados, previsoes = ev.executar_experimentos(desenvolvimento, ponderados=False)
+    ev.salvar_relatorios(resultados, previsoes, tmp_path)
     recarregado = pd.read_csv(tmp_path / "tabelas/p3_previsoes_validacao_2024.csv.gz")
     assert_frame_equal(recarregado, previsoes, check_dtype=False, atol=1e-14)
-    assert (tmp_path / "README_modelagem.md").is_file()
+    assert not list(tmp_path.glob("*.json"))
     for nome in ("p3_comparacao_ap", "p3_precision_recall_validacao", "p3_calibracao_validacao"):
         assert (tmp_path / f"figuras/{nome}.png").stat().st_size > 1000
     for nome in ("p3_validacao_2024", "p3_resumo_validacao_2024", "p3_metricas_globais_2024",
@@ -296,7 +295,7 @@ def test_arquivos_de_saida_e_protecao_p1_p2(desenvolvimento, monkeypatch, tmp_pa
         tabela = pd.read_csv(tmp_path / f"tabelas/{nome}.csv")
         assert set(CHAVES) <= set(tabela)
         assert not tabela.empty
-    assert antes == {str(p): ev.sha256(p) for p in protegidos}
+    assert antes == {str(p): sha256(p) for p in protegidos}
     for coluna, valor in (("ano", 2025), ("mes", 1), ("rodada", 4)):
         corrompida = previsoes.copy()
         corrompida.loc[0, coluna] = valor
@@ -315,17 +314,14 @@ def test_entrada_principal_isola_2024(desenvolvimento, monkeypatch, tmp_path):
     monkeypatch.setattr(ev, "ALGORITMOS", ("dummy",))
     monkeypatch.setattr("sys.argv", ["validacao", "--csv", str(csv), "--saida", str(tmp_path / "reports")])
     ev.main()
-    meta = json.loads((tmp_path / "reports/p3_execucao_2024.json").read_text(encoding="utf-8"))
-    assert meta["n_desenvolvimento"] == 72
-    assert meta["teste_final_avaliado"] is False
-    assert meta["csv_sha256"] == hashlib.sha256(csv.read_bytes()).hexdigest()
+    assert not list((tmp_path / "reports").glob("*.json"))
     p = pd.read_csv(tmp_path / "reports/tabelas/p3_previsoes_validacao_2024.csv.gz")
     # O carregador usa posição no CSV, preservando o deslocamento de 72 linhas.
     assert p.linha_original.between(72, 143).all()
     assert p.y_real.mean() == pytest.approx(1 / 6)
     assert p.probabilidade.eq(1 / 6).all() or np.allclose(p.probabilidade, 1 / 6)
     arquivos = list((tmp_path / "reports/tabelas").glob("*"))
-    hashes_antes = {f.name: ev.sha256(f) for f in arquivos}
+    hashes_antes = {f.name: sha256(f) for f in arquivos}
 
     def proibido(*args):
         pytest.fail("Regenerar relatórios não pode ajustar pipelines.")
@@ -333,4 +329,4 @@ def test_entrada_principal_isola_2024(desenvolvimento, monkeypatch, tmp_path):
     monkeypatch.setattr(ev, "criar_pipeline", proibido)
     monkeypatch.setattr("sys.argv", ["validacao", "--somente-relatorios", "--saida", str(tmp_path / "reports")])
     ev.main()
-    assert hashes_antes == {f.name: ev.sha256(f) for f in arquivos}
+    assert hashes_antes == {f.name: sha256(f) for f in arquivos}

@@ -1,215 +1,213 @@
-# Pessoa 3 — Etapa 03: validação temporal de 2024
+# Modelagem: fatalidade em acidentes registrados pela PRF
 
-Relatório gerado por `python -m src.p3_modelagem.executar_validacao`.
+Classificação binária de acidentes registrados em rodovias federais: `acidente_fatal = 1`
+quando houve ao menos uma morte e `0` caso contrário. Os modelos estimam a chance de
+fatalidade **condicional a um acidente registrado**, não a probabilidade de um acidente acontecer.
 
-## Protocolo e rastreabilidade
+## Dados e cenários
 
-CSV: `data/processed/acidentes_prf_modelagem.csv`; SHA-256: `518f7d54e8f0093befd41939b47117344ee2983ab977d47124794c3212f05552`.
+A entrada é [acidentes_prf_modelagem.csv](../data/processed/acidentes_prf_modelagem.csv),
+produzida pela engenharia de dados. São 73.006 acidentes de 2024 e 72.336 de 2025;
+o teste contém 5.104 acidentes fatais (7,056%).
 
-Desenvolvimento completo: 73006 registros de 2024. Semente: 42.
+- **A — retrospectivo, 34 atributos:** localização, calendário, características do
+  acidente, causa, veículos e condições da via. Parte dessas informações é observada
+  após a ocorrência e não está disponível para uma previsão antecipada.
+- **B — localização e calendário, 12 atributos:** dia da semana, UF, BR, km, latitude,
+  longitude, hora, faixa horária, mês, fim de semana, feriado e região.
 
-O carregador existente lê e valida o contrato do CSV completo; a separação existente isola 2024. O objeto reservado de 2025 é descartado antes dos experimentos, sem inferência, métricas, seleção ou inspeção de resultados de 2025.
+As listas ordenadas `FEATURES_A` e `FEATURES_B`, os cortes e os limiares estão em
+[configuracao.py](../src/p3_modelagem/configuracao.py). O alvo, consequências como
+mortos e feridos, identificadores, ano, atributos sensíveis dos condutores e
+indicadores globais de outliers não entram como preditores.
 
-Treino janeiro–junho / validação julho–agosto; janeiro–agosto / setembro–outubro; janeiro–outubro / novembro–dezembro. Cortes gerados uma única vez e reutilizados nos dois cenários e em todas as variantes. Pipeline novo por ajuste, pré-processamento ajustado apenas no treino; estimadores descartados após inferência. Tempo de inferência inclui transformação e predict_proba; tempo de treino inclui todo o fit.
+O pré-processamento fica dentro dos pipelines: imputação numérica pela mediana,
+One-Hot para categorias, ignorando categorias novas, e passagem direta de binários.
+A regressão logística também padroniza as variáveis numéricas. Todas as transformações
+aprendidas são ajustadas somente no treino de cada rodada.
 
-| rodada | n_treino | n_validacao | positivos_treino | positivos_validacao |
-| --- | --- | --- | --- | --- |
-| 1 | 35160 | 12537 | 2452 | 909 |
-| 2 | 47697 | 12599 | 3361 | 869 |
-| 3 | 60296 | 12710 | 4230 | 906 |
+## Separação temporal e modelos
 
-Execuções concluídas: 42; falhas: 0.
+2024 foi usado para desenvolver e selecionar os modelos. A validação temporal usa
+três janelas expansivas, sem embaralhamento:
 
-Configurações e pesos efetivos de cada treino, versões, avisos, falhas e hashes dos índices estão em `p3_execucao_2024.json`.
+| Rodada | Treino em 2024 | Validação em 2024 |
+|---|---|---|
+| 1 | janeiro a junho | julho e agosto |
+| 2 | janeiro a agosto | setembro e outubro |
+| 3 | janeiro a outubro | novembro e dezembro |
 
-## Comparação no limiar 0,5
+Foram comparados Dummy com estratégia prior, regressão logística, Random Forest e
+XGBoost nos dois cenários. Além das configurações padrão, foram avaliados pesos de
+classe: `balanced` na regressão/Random Forest e negativos/positivos **do treino** no
+XGBoost. São 42 ajustes ao todo. Não houve reamostragem nem busca adicional de hiperparâmetros.
 
-Médias não ponderadas entre três cortes. DP populacional (ddof=0), apenas descritivo, sem interpretação de intervalo de confiança. Campos NaN/CSV vazio indicam métricas indefinidas; a coluna `indefinidas` explica os motivos. Médias e DP ignoram valores indefinidos; os campos *_n_definidos no resumo informam quantos cortes contribuíram. Precision é indefinida quando não há positivos previstos; recall é indefinido sem positivos reais; F1 é zero quando há positivos reais mas nenhum previsto; AP é indefinida sem positivos reais e ROC-AUC exige ambas as classes. Brier e Log Loss são calculados com as probabilidades originais, sem recalibração. AP usa average_precision_score.
+Os parâmetros explícitos estão em [modelos.py](../src/p3_modelagem/modelos.py):
+regressão com max_iter=2000; Random Forest com 100 árvores, profundidade 12 e
+min_samples_leaf=3; XGBoost com 100 árvores, profundidade 4, learning_rate=0,1,
+objective=binary:logistic, eval_metric=logloss, hist e CPU. A semente é 42;
+Random Forest e XGBoost usam n_jobs=2.
 
-| cenario | algoritmo | variante | ap_media | ap_dp | roc_auc_media | precision_media | precision_n_definidos | recall_media | f1_media | brier_media | log_loss_media | tempo_treino_total_s |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A | dummy | padrao | 0.070921 | 0.001464 | 0.500000 | indefinida | 0 | 0.000000 | 0.000000 | 0.065892 | 0.256026 | 0.962514 |
-| A | random_forest | padrao | 0.353601 | 0.028346 | 0.830738 | 0.933333 | 3 | 0.003005 | 0.005984 | 0.056090 | 0.205210 | 16.812448 |
-| A | random_forest | ponderado | 0.339779 | 0.023181 | 0.828883 | 0.269152 | 3 | 0.583936 | 0.368160 | 0.135649 | 0.442977 | 16.247120 |
-| A | regressao_logistica | padrao | 0.333317 | 0.028684 | 0.833365 | 0.537360 | 3 | 0.122849 | 0.199833 | 0.055729 | 0.201274 | 1.878910 |
-| A | regressao_logistica | ponderado | 0.320475 | 0.024589 | 0.835543 | 0.209125 | 3 | 0.721227 | 0.324159 | 0.157873 | 0.493183 | 2.373474 |
-| A | xgboost | padrao | 0.378798 | 0.028134 | 0.850139 | 0.611457 | 3 | 0.121741 | 0.203025 | 0.053357 | 0.192962 | 2.023372 |
-| A | xgboost | ponderado | 0.373224 | 0.028249 | 0.850705 | 0.231373 | 3 | 0.723471 | 0.350561 | 0.144253 | 0.453019 | 1.745036 |
-| B | dummy | padrao | 0.070921 | 0.001464 | 0.500000 | indefinida | 0 | 0.000000 | 0.000000 | 0.065892 | 0.256026 | 0.380203 |
-| B | random_forest | padrao | 0.153434 | 0.011051 | 0.681503 | indefinida | 0 | 0.000000 | 0.000000 | 0.063730 | 0.242142 | 9.255777 |
-| B | random_forest | ponderado | 0.150623 | 0.010001 | 0.680084 | 0.135613 | 3 | 0.445485 | 0.207864 | 0.191991 | 0.571662 | 10.960695 |
-| B | regressao_logistica | padrao | 0.142408 | 0.004248 | 0.668934 | 0.166667 | 2 | 0.000367 | 0.000731 | 0.064000 | 0.243486 | 0.966598 |
-| B | regressao_logistica | ponderado | 0.141212 | 0.004788 | 0.668277 | 0.111844 | 3 | 0.606688 | 0.188850 | 0.229240 | 0.653204 | 1.656540 |
-| B | xgboost | padrao | 0.155628 | 0.009253 | 0.688005 | 0.000000 | 1 | 0.000000 | 0.000000 | 0.063489 | 0.240476 | 0.956085 |
-| B | xgboost | ponderado | 0.151928 | 0.008795 | 0.684316 | 0.119750 | 3 | 0.597626 | 0.199506 | 0.215316 | 0.620079 | 1.356297 |
+O XGBoost padrão foi selecionado em ambos os cenários pela AP média das validações.
+Cada pipeline definitivo foi treinado novamente com **todo 2024** e avaliado em 2025.
+Os limiares abaixo foram escolhidos por maximização de F1 nas previsões de validação
+de 2024 e mantidos no teste:
 
-## Rodadas individuais
+| Cenário | Limiar |
+|---|---|
+| A | 0.2066718339920044 |
+| B | 0.101788230240345 |
 
-| cenario | algoritmo | variante | rodada | prevalencia | ap | roc_auc | precision | recall | f1 | tp | fp | tn | fn |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A | dummy | padrao | 1 | 0.072505 | 0.072505 | 0.500000 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11628 | 909 |
-| A | dummy | padrao | 2 | 0.068974 | 0.068974 | 0.500000 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11730 | 869 |
-| A | dummy | padrao | 3 | 0.071282 | 0.071282 | 0.500000 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11804 | 906 |
-| A | regressao_logistica | padrao | 1 | 0.072505 | 0.352951 | 0.840617 | 0.591133 | 0.132013 | 0.215827 | 120 | 83 | 11545 | 789 |
-| A | regressao_logistica | padrao | 2 | 0.068974 | 0.292758 | 0.821704 | 0.459091 | 0.116226 | 0.185491 | 101 | 119 | 11611 | 768 |
-| A | regressao_logistica | padrao | 3 | 0.071282 | 0.354241 | 0.837776 | 0.561856 | 0.120309 | 0.198182 | 109 | 85 | 11719 | 797 |
-| A | random_forest | padrao | 1 | 0.072505 | 0.372848 | 0.832122 | 1.000000 | 0.001100 | 0.002198 | 1 | 0 | 11628 | 908 |
-| A | random_forest | padrao | 2 | 0.068974 | 0.313524 | 0.825420 | 0.800000 | 0.004603 | 0.009153 | 4 | 1 | 11729 | 865 |
-| A | random_forest | padrao | 3 | 0.071282 | 0.374432 | 0.834673 | 1.000000 | 0.003311 | 0.006601 | 3 | 0 | 11804 | 903 |
-| A | xgboost | padrao | 1 | 0.072505 | 0.403598 | 0.854617 | 0.637931 | 0.122112 | 0.204986 | 111 | 63 | 11565 | 798 |
-| A | xgboost | padrao | 2 | 0.068974 | 0.339454 | 0.841537 | 0.555556 | 0.115075 | 0.190658 | 100 | 80 | 11650 | 769 |
-| A | xgboost | padrao | 3 | 0.071282 | 0.393341 | 0.854263 | 0.640884 | 0.128035 | 0.213431 | 116 | 65 | 11739 | 790 |
-| B | dummy | padrao | 1 | 0.072505 | 0.072505 | 0.500000 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11628 | 909 |
-| B | dummy | padrao | 2 | 0.068974 | 0.068974 | 0.500000 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11730 | 869 |
-| B | dummy | padrao | 3 | 0.071282 | 0.071282 | 0.500000 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11804 | 906 |
-| B | regressao_logistica | padrao | 1 | 0.072505 | 0.139031 | 0.663329 | 0.333333 | 0.001100 | 0.002193 | 1 | 2 | 11626 | 908 |
-| B | regressao_logistica | padrao | 2 | 0.068974 | 0.139794 | 0.667541 | 0.000000 | 0.000000 | 0.000000 | 0 | 2 | 11728 | 869 |
-| B | regressao_logistica | padrao | 3 | 0.071282 | 0.148399 | 0.675932 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11804 | 906 |
-| B | random_forest | padrao | 1 | 0.072505 | 0.143091 | 0.670147 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11628 | 909 |
-| B | random_forest | padrao | 2 | 0.068974 | 0.148460 | 0.682743 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11730 | 869 |
-| B | random_forest | padrao | 3 | 0.071282 | 0.168751 | 0.691618 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11804 | 906 |
-| B | xgboost | padrao | 1 | 0.072505 | 0.145711 | 0.678911 | 0.000000 | 0.000000 | 0.000000 | 0 | 1 | 11627 | 909 |
-| B | xgboost | padrao | 2 | 0.068974 | 0.153195 | 0.688413 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11730 | 869 |
-| B | xgboost | padrao | 3 | 0.071282 | 0.167980 | 0.696691 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 11804 | 906 |
-| A | regressao_logistica | ponderado | 1 | 0.072505 | 0.337743 | 0.841956 | 0.215820 | 0.729373 | 0.333082 | 663 | 2409 | 9219 | 246 |
-| A | regressao_logistica | ponderado | 2 | 0.068974 | 0.285701 | 0.825604 | 0.196773 | 0.715765 | 0.308685 | 622 | 2539 | 9191 | 247 |
-| A | regressao_logistica | ponderado | 3 | 0.071282 | 0.337980 | 0.839068 | 0.214781 | 0.718543 | 0.330709 | 651 | 2380 | 9424 | 255 |
-| A | random_forest | ponderado | 1 | 0.072505 | 0.352712 | 0.829652 | 0.288313 | 0.575358 | 0.384135 | 523 | 1291 | 10337 | 386 |
-| A | random_forest | ponderado | 2 | 0.068974 | 0.307225 | 0.821764 | 0.244389 | 0.563867 | 0.340988 | 490 | 1515 | 10215 | 379 |
-| A | random_forest | ponderado | 3 | 0.071282 | 0.359401 | 0.835232 | 0.274752 | 0.612583 | 0.379357 | 555 | 1465 | 10339 | 351 |
-| A | xgboost | ponderado | 1 | 0.072505 | 0.398596 | 0.854989 | 0.236285 | 0.724972 | 0.356409 | 659 | 2130 | 9498 | 250 |
-| A | xgboost | ponderado | 2 | 0.068974 | 0.333813 | 0.841748 | 0.220183 | 0.718067 | 0.337024 | 624 | 2210 | 9520 | 245 |
-| A | xgboost | ponderado | 3 | 0.071282 | 0.387263 | 0.855377 | 0.237649 | 0.727373 | 0.358250 | 659 | 2114 | 9690 | 247 |
-| B | regressao_logistica | ponderado | 1 | 0.072505 | 0.137439 | 0.662307 | 0.113386 | 0.621562 | 0.191785 | 565 | 4418 | 7210 | 344 |
-| B | regressao_logistica | ponderado | 2 | 0.068974 | 0.138230 | 0.665678 | 0.105730 | 0.590334 | 0.179339 | 513 | 4339 | 7391 | 356 |
-| B | regressao_logistica | ponderado | 3 | 0.071282 | 0.147967 | 0.676845 | 0.116417 | 0.608168 | 0.195425 | 551 | 4182 | 7622 | 355 |
-| B | random_forest | ponderado | 1 | 0.072505 | 0.141463 | 0.668102 | 0.133830 | 0.414741 | 0.202362 | 377 | 2440 | 9188 | 532 |
-| B | random_forest | ponderado | 2 | 0.068974 | 0.145871 | 0.684176 | 0.134609 | 0.461450 | 0.208420 | 401 | 2578 | 9152 | 468 |
-| B | random_forest | ponderado | 3 | 0.071282 | 0.164536 | 0.687972 | 0.138400 | 0.460265 | 0.212809 | 417 | 2596 | 9208 | 489 |
-| B | xgboost | ponderado | 1 | 0.072505 | 0.145860 | 0.670990 | 0.117179 | 0.583058 | 0.195140 | 530 | 3993 | 7635 | 379 |
-| B | xgboost | ponderado | 2 | 0.068974 | 0.145559 | 0.688063 | 0.116107 | 0.597238 | 0.194418 | 519 | 3951 | 7779 | 350 |
-| B | xgboost | ponderado | 3 | 0.071282 | 0.164365 | 0.693895 | 0.125965 | 0.612583 | 0.208961 | 555 | 3851 | 7953 | 351 |
+A regra é `probabilidade >= limiar`. O baseline final foi treinado uma vez:
+suas probabilidades constantes independem das features. As métricas dele estão
+salvas; somente os XGBoost A/B precisam ser serializados.
 
-## Previsões reunidas e limiares
+## Métricas e resultados
 
-As validações julho–dezembro são disjuntas. As métricas abaixo usam todas as previsões reunidas; não são médias das métricas dos cortes. O baseline constante do Dummy por rodada tem AP igual à prevalência da respectiva validação; ao reunir rodadas, suas constantes podem variar e o AP global pode diferir da prevalência global.
+A métrica principal é **Average Precision (AP)**, que resume o ranking na curva
+Precision-Recall e é adequada à classe positiva pouco frequente. AP não é acurácia
+nem precision em um limiar. Também foram calculados ROC-AUC, precision, recall, F1,
+Brier Score, Log Loss, matriz de confusão e tempos de treino/inferência.
+Brier e Log Loss menores indicam melhor qualidade probabilística.
+Precision fica indefinida quando não há positivos previstos.
 
-| cenario | algoritmo | variante | n_validacao | prevalencia | ap | roc_auc | brier | log_loss |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A | dummy | padrao | 37846 | 0.070919 | 0.070024 | 0.494053 | 0.065891 | 0.256022 |
-| A | random_forest | padrao | 37846 | 0.070919 | 0.350117 | 0.830730 | 0.056088 | 0.205204 |
-| A | random_forest | ponderado | 37846 | 0.070919 | 0.338222 | 0.828817 | 0.135657 | 0.442999 |
-| A | regressao_logistica | padrao | 37846 | 0.070919 | 0.331238 | 0.833515 | 0.055727 | 0.201267 |
-| A | regressao_logistica | ponderado | 37846 | 0.070919 | 0.318280 | 0.835668 | 0.157865 | 0.493166 |
-| A | xgboost | padrao | 37846 | 0.070919 | 0.377599 | 0.850189 | 0.053355 | 0.192957 |
-| A | xgboost | ponderado | 37846 | 0.070919 | 0.371607 | 0.850784 | 0.144254 | 0.453028 |
-| B | dummy | padrao | 37846 | 0.070919 | 0.070024 | 0.494053 | 0.065891 | 0.256022 |
-| B | random_forest | padrao | 37846 | 0.070919 | 0.151465 | 0.681364 | 0.063727 | 0.242130 |
-| B | random_forest | ponderado | 37846 | 0.070919 | 0.149393 | 0.679824 | 0.191986 | 0.571650 |
-| B | regressao_logistica | padrao | 37846 | 0.070919 | 0.141335 | 0.668799 | 0.063997 | 0.243477 |
-| B | regressao_logistica | ponderado | 37846 | 0.070919 | 0.139646 | 0.668140 | 0.229219 | 0.653157 |
-| B | xgboost | padrao | 37846 | 0.070919 | 0.154057 | 0.687859 | 0.063486 | 0.240464 |
-| B | xgboost | ponderado | 37846 | 0.070919 | 0.150863 | 0.684144 | 0.215296 | 0.620036 |
+| Resultado | A | B | Dummy |
+|---|---:|---:|---:|
+| AP média das validações de 2024 | 0,378798 | 0,155628 | 0,070921 |
+| AP no teste de 2025 | 0,377379 | 0,153435 | 0,070560 |
+| ROC-AUC em 2025 | 0,850367 | 0,685863 | 0,500000 |
+| Precision em 2025 | 0,400614 | 0,158239 | indefinida |
+| Recall em 2025 | 0,434757 | 0,350705 | 0 |
+| F1 em 2025 | 0,416988 | 0,218080 | 0 |
+| Brier em 2025 | 0,053186 | 0,063204 | 0,065581 |
+| Log Loss em 2025 | 0,192457 | 0,239816 | 0,255084 |
 
-Busca exata nos escores únicos observados (inclui probabilidades pequenas). Maximiza F1; empates com atol=1e-12 e rtol=0 favorecem o maior limiar. A decisão é p >= limiar. O limiar e seu F1 são ajustados nas mesmas validações: esses valores são otimistas e não constituem avaliação independente. Também existe otimismo de seleção ao comparar modelos em 2024.
+Precision, recall e F1 dos XGBoost usam os limiares selecionados em 2024; o Dummy usa
+0,5. Os CSVs também trazem a comparação descritiva dos XGBoost em 0,5.
 
-| cenario | algoritmo | variante | tipo_limiar | limiar | precision | recall | f1 | fp | tp | fn |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| A | dummy | padrao | padrao_0.5 | 0.500000 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 2684 |
-| A | dummy | padrao | candidato_f1_ajuste | 0.069738 | 0.070919 | 1.000000 | 0.132445 | 35162 | 2684 | 0 |
-| A | random_forest | padrao | padrao_0.5 | 0.500000 | 0.888889 | 0.002981 | 0.005941 | 1 | 8 | 2676 |
-| A | random_forest | padrao | candidato_f1_ajuste | 0.162292 | 0.360750 | 0.444486 | 0.398264 | 2114 | 1193 | 1491 |
-| A | random_forest | ponderado | padrao_0.5 | 0.500000 | 0.268539 | 0.584203 | 0.367946 | 4271 | 1568 | 1116 |
-| A | random_forest | ponderado | candidato_f1_ajuste | 0.620641 | 0.396785 | 0.404620 | 0.400664 | 1651 | 1086 | 1598 |
-| A | regressao_logistica | padrao | padrao_0.5 | 0.500000 | 0.534846 | 0.122951 | 0.199939 | 287 | 330 | 2354 |
-| A | regressao_logistica | padrao | candidato_f1_ajuste | 0.158404 | 0.321628 | 0.494784 | 0.389843 | 2801 | 1328 | 1356 |
-| A | regressao_logistica | ponderado | padrao_0.5 | 0.500000 | 0.208981 | 0.721311 | 0.324071 | 7328 | 1936 | 748 |
-| A | regressao_logistica | ponderado | candidato_f1_ajuste | 0.726399 | 0.307058 | 0.499255 | 0.380250 | 3024 | 1340 | 1344 |
-| A | xgboost | padrao | padrao_0.5 | 0.500000 | 0.611215 | 0.121833 | 0.203169 | 208 | 327 | 2357 |
-| A | xgboost | padrao | candidato_f1_ajuste | 0.206672 | 0.404091 | 0.448957 | 0.425344 | 1777 | 1205 | 1479 |
-| A | xgboost | ponderado | padrao_0.5 | 0.500000 | 0.231301 | 0.723547 | 0.350542 | 6454 | 1942 | 742 |
-| A | xgboost | ponderado | candidato_f1_ajuste | 0.727440 | 0.386892 | 0.477273 | 0.427356 | 2030 | 1281 | 1403 |
-| B | dummy | padrao | padrao_0.5 | 0.500000 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 2684 |
-| B | dummy | padrao | candidato_f1_ajuste | 0.069738 | 0.070919 | 1.000000 | 0.132445 | 35162 | 2684 | 0 |
-| B | random_forest | padrao | padrao_0.5 | 0.500000 | indefinida | 0.000000 | 0.000000 | 0 | 0 | 2684 |
-| B | random_forest | padrao | candidato_f1_ajuste | 0.105978 | 0.176433 | 0.311848 | 0.225363 | 3907 | 837 | 1847 |
-| B | random_forest | ponderado | padrao_0.5 | 0.500000 | 0.135657 | 0.445231 | 0.207953 | 7614 | 1195 | 1489 |
-| B | random_forest | ponderado | candidato_f1_ajuste | 0.533491 | 0.158991 | 0.338301 | 0.216319 | 4803 | 908 | 1776 |
-| B | regressao_logistica | padrao | padrao_0.5 | 0.500000 | 0.200000 | 0.000373 | 0.000744 | 4 | 1 | 2683 |
-| B | regressao_logistica | padrao | candidato_f1_ajuste | 0.110087 | 0.157707 | 0.330104 | 0.213443 | 4732 | 886 | 1798 |
-| B | regressao_logistica | ponderado | padrao_0.5 | 0.500000 | 0.111820 | 0.606930 | 0.188848 | 12939 | 1629 | 1055 |
-| B | regressao_logistica | ponderado | candidato_f1_ajuste | 0.598248 | 0.146919 | 0.379285 | 0.211797 | 5911 | 1018 | 1666 |
-| B | xgboost | padrao | padrao_0.5 | 0.500000 | 0.000000 | 0.000000 | 0.000000 | 1 | 0 | 2684 |
-| B | xgboost | padrao | candidato_f1_ajuste | 0.101788 | 0.161270 | 0.372951 | 0.225172 | 5206 | 1001 | 1683 |
-| B | xgboost | ponderado | padrao_0.5 | 0.500000 | 0.119710 | 0.597615 | 0.199465 | 11795 | 1604 | 1080 |
-| B | xgboost | ponderado | candidato_f1_ajuste | 0.578428 | 0.153012 | 0.399404 | 0.221259 | 5934 | 1072 | 1612 |
+A AP caiu 0,001418 em A e 0,002194 em B em relação à média das validações de 2024.
+No teste, A e B obtiveram respectivamente 5,35 e 2,17 vezes a AP do Dummy, igual à
+prevalência de 2025. Os modelos não foram reajustados após esses resultados.
 
-## Ponderação e calibração aproximada
+As validações de 2024 usaram tamanhos de treino diferentes; as médias entre cortes
+não equivalem às métricas de todas as previsões reunidas. Precision/recall/F1 de
+ajuste do limiar em 2024 são otimistas, pois foram medidos nas previsões usadas para
+escolhê-lo. A avaliação temporal de 2025 é independente dessa escolha.
+A diferença entre A/B ou entre anos não identifica causas.
 
-### Cenário A
+## Resultados para o artigo e a apresentação
 
-- regressao_logistica: ΔAP=-0.012842, Δrecall=+0.598378, Δprecision=-0.328235, ΔF1=+0.124325, ΔBrier=+0.102144, ΔLogLoss=+0.291909; DP(AP) padrão=0.028684, ponderado=0.024589.
+| Arquivo ou pasta | Uso |
+|---|---|
+| [p3_resumo_validacao_2024.csv](tabelas/p3_resumo_validacao_2024.csv) | Médias e dispersão dos modelos entre os três cortes |
+| [p3_validacao_2024.csv](tabelas/p3_validacao_2024.csv) | Métricas individuais por rodada |
+| [p3_previsoes_validacao_2024.csv.gz](tabelas/p3_previsoes_validacao_2024.csv.gz) | Previsões fora do treino para reproduzir curvas e limiares |
+| [p3_metricas_globais_2024.csv](tabelas/p3_metricas_globais_2024.csv) | Métricas das previsões reunidas, distintas das médias por rodada |
+| [p3_comparacao_limiares.csv](tabelas/p3_comparacao_limiares.csv) | Comparação entre 0,5 e limiar ajustado em 2024 |
+| [p3_calibracao_2024.csv](tabelas/p3_calibracao_2024.csv) | Frequência observada por faixa de probabilidade |
+| [metricas_2025.csv](p3_final/metricas_2025.csv) | Métricas finais e matrizes de confusão em colunas TN/FP/FN/TP |
+| [previsoes_2025.csv.gz](p3_final/previsoes_2025.csv.gz) | Probabilidades e classes finais por observação |
+| [comparacao_2024_2025.csv](p3_final/comparacao_2024_2025.csv) | Comparação entre validação e teste |
+| [calibracao_2025.csv](p3_final/calibracao_2025.csv) | Probabilidades médias, frequências fatais e contagens por faixa |
+| [figuras de 2024](figuras/) e [figuras de 2025](p3_final/figuras/) | AP, Precision-Recall, ROC, calibração e matrizes de confusão |
 
-- random_forest: ΔAP=-0.013822, Δrecall=+0.580931, Δprecision=-0.664182, ΔF1=+0.362176, ΔBrier=+0.079559, ΔLogLoss=+0.237767; DP(AP) padrão=0.028346, ponderado=0.023181.
+A calibração é aproximada, em faixas fixas de 0,1. Há diferenças entre probabilidade
+média e frequência observada; faixas superiores têm poucas observações e são instáveis.
+Não houve recalibração.
 
-- xgboost: ΔAP=-0.005573, Δrecall=+0.601730, Δprecision=-0.380084, ΔF1=+0.147536, ΔBrier=+0.090896, ΔLogLoss=+0.260057; DP(AP) padrão=0.028134, ponderado=0.028249.
+## Como executar
 
-### Cenário B
+Execute os comandos na raiz do repositório, em um ambiente com as dependências de
+[requirements.txt](../requirements.txt). Os modelos salvos foram produzidos com
+Python 3.12.4, numpy 2.4.2, pandas 3.0.0, scikit-learn 1.7.2, XGBoost 3.4.1,
+matplotlib 3.10.8 e joblib 1.5.2. Use versões compatíveis para carregá-los.
 
-- regressao_logistica: ΔAP=-0.001196, Δrecall=+0.606321, Δprecision=-0.054823, ΔF1=+0.188119, ΔBrier=+0.165240, ΔLogLoss=+0.409718; DP(AP) padrão=0.004248, ponderado=0.004788.
+Os resultados já estão prontos. Para recriar **somente os gráficos a partir dos CSVs**,
+sem treinamento ou inferência:
 
-- random_forest: ΔAP=-0.002811, Δrecall=+0.445485, Δprecision=indefinida, ΔF1=+0.207864, ΔBrier=+0.128261, ΔLogLoss=+0.329520; DP(AP) padrão=0.011051, ponderado=0.010001.
+```bash
+python -m src.p3_modelagem.executar_validacao --somente-relatorios
+python -m src.p3_modelagem.executar_avaliacao_final --somente-relatorios
+```
 
-- xgboost: ΔAP=-0.003700, Δrecall=+0.597626, Δprecision=+0.119750, ΔF1=+0.199506, ΔBrier=+0.151827, ΔLogLoss=+0.379603; DP(AP) padrão=0.009253, ponderado=0.008795.
+Para reproduzir os experimentos quando necessário, escreva em outras pastas:
 
-Deltas são ponderado menos padrão; Brier/Log Loss menores são melhores. Pesos balanced em LR/RF e scale_pos_weight=negativos/positivos do treino em XGBoost. Sem reamostragem. As faixas fixas de largura 0,1 no CSV/gráfico de calibração permitem observar discrepâncias entre probabilidade média e frequência fatal; faixas pouco povoadas são instáveis. Brier/Log Loss avaliam qualidade probabilística e não demonstram sozinhos calibração perfeita.
+```bash
+python -m src.p3_modelagem.executar_validacao --saida reports/reproducao_2024
+python -m src.p3_modelagem.executar_avaliacao_final --saida reports/reproducao_2025 --modelos models/reproducao
+```
 
-## Candidatas preliminares para revisão
+Esses dois últimos comandos treinam modelos; não são necessários para consumir os
+resultados publicados. O comando final recusa sobrescrever modelos ou resultados existentes.
+O argumento `--csv` permite indicar outra cópia da base com o mesmo esquema.
+`--reports-2024` indica a pasta de validação para a comparação final, quando necessário.
 
-- Cenário A: **xgboost / padrao**, AP médio=0.378798 ± 0.028134 (Dummy=0.070921; razão=5.34×). Brier=0.053357; Log Loss=0.192962. Limiar candidato=0.206671833992; precision de ajuste=0.404091, recall=0.448957, F1=0.425344, FP=1777. Recomendação preliminar pelo maior AP médio completo; estabilidade e probabilidades devem ser revistas nas tabelas acima. O F1 ajustado não participa da escolha do modelo.
+Testes com dados sintéticos:
 
-AP nas rodadas 1/2/3: 0.403598, 0.339454, 0.393341.
+```bash
+python -m pytest tests/test_modelagem_p3.py tests/test_modelos_p3.py tests/test_avaliacao_p3.py tests/test_avaliacao_final_p3.py -q
+```
 
-A segunda configuração por AP médio foi xgboost / ponderado (0.373224 ± 0.028249); diferença observada de 0.005573. Esses três cortes não demonstram superioridade estatística rigorosa. A decisão permanece preliminar.
+## Pessoa 4: modelos e pré-processamento para SHAP
 
-- Cenário B: **xgboost / padrao**, AP médio=0.155628 ± 0.009253 (Dummy=0.070921; razão=2.19×). Brier=0.063489; Log Loss=0.240476. Limiar candidato=0.10178823024; precision de ajuste=0.161270, recall=0.372951, F1=0.225172, FP=5206. Recomendação preliminar pelo maior AP médio completo; estabilidade e probabilidades devem ser revistas nas tabelas acima. O F1 ajustado não participa da escolha do modelo.
+Os pipelines completos estão em [models/](../models/). As interfaces
+`carregar_pipeline` e `prever` continuam em
+[executar_avaliacao_final.py](../src/p3_modelagem/executar_avaliacao_final.py).
 
-AP nas rodadas 1/2/3: 0.145711, 0.153195, 0.167980.
+```python
+from src.p3_modelagem.configuracao import FEATURES_POR_CENARIO, LIMIARES
+from src.p3_modelagem.dados import carregar_base, selecionar_xy
+from src.p3_modelagem.executar_avaliacao_final import carregar_pipeline
 
-A segunda configuração por AP médio foi random_forest / padrao (0.153434 ± 0.011051); diferença observada de 0.002194. Esses três cortes não demonstram superioridade estatística rigorosa. A decisão permanece preliminar.
+cenario = "A"  # ou "B"
+pipeline = carregar_pipeline(cenario)
+features_originais = FEATURES_POR_CENARIO[cenario]
+limiar = LIMIARES[cenario]
+preprocessamento = pipeline.named_steps["preprocessamento"]
+estimador = pipeline.named_steps["modelo"]
+nomes_transformados = preprocessamento.get_feature_names_out()
 
-A diferença observada entre as candidatas A e B é ΔAP=0.223169 (razão A/B=2.43×). A usa informações retrospectivas do acidente; B estima fatalidade condicional a um acidente registrado com atributos disponíveis antecipadamente. B não prevê a ocorrência de acidentes. A diferença de AP entre cenários sugere dependência de informações posteriores à ocorrência, mas não é uma decomposição causal nem isola o efeito de cada atributo.
+base = carregar_base()
+X, y = selecionar_xy(base.loc[base.ano.eq(2024)], cenario)
+X_transformado = preprocessamento.transform(X)
+```
 
-## Verificação da entrega
+As colunas de `X_transformado` correspondem, na mesma ordem, a `nomes_transformados`.
+Use `transform` do objeto ajustado, sem novo `fit`. Carregue apenas arquivos joblib confiáveis.
 
-| item | resultado |
-| --- | --- |
-| testes_novos | 28 aprovados (16,03 s) |
-| suite_completa | 162 aprovados (92,39 s) |
-| testes_apos_ajuste_apresentacao | 2 aprovados |
-| integridade_P1_P2_dados | 32 arquivos com SHA-256 idêntico ao início (excluídos caches Python) |
-| git | branch p3/modelagem; HEAD 9143289; nenhum arquivo rastreado alterado |
-| resultados_reais | 42 ajustes, 14 configurações, 529844 previsões; métricas recalculadas (atol=1e-7 para float32/float64) e alinhadas ao índice original de 2024 |
-| falhas_avisos | 0 falhas; 0 avisos registrados nos 42 ajustes |
+## Pessoa 5: previsões e métricas
 
-## Artefatos e reprodução
+```python
+import pandas as pd
+from src.p3_modelagem.configuracao import LIMIARES
 
-- `tabelas/p3_validacao_2024.csv`: 42 linhas esperadas, métricas individuais e tempos.
+previsoes = pd.read_csv("reports/p3_final/previsoes_2025.csv.gz")
+metricas = pd.read_csv("reports/p3_final/metricas_2025.csv")
+previsoes_A = previsoes.loc[previsoes.modelo.eq("xgboost_A")]
+```
 
-- `tabelas/p3_resumo_validacao_2024.csv`: médias, DP, contagens de valores definidos e tempo total.
+`linha_original` é a posição original no CSV de entrada, começando em zero.
+A chave é `modelo + linha_original`; `cenario` sozinho não distingue B do Dummy.
+As colunas `y_real`, `probabilidade`, `limiar`, `previsao` e `previsao_05`
+permitem integrar resultados sem nova inferência. Na tabela de métricas,
+`tipo_limiar` distingue o limiar selecionado, 0,5 descritivo e baseline.
 
-- `tabelas/p3_metricas_globais_2024.csv`: métricas das validações reunidas.
+Para outras observações, `prever(pipeline, base, cenario)` devolve probabilidades
+e classes pelo limiar selecionado, preservando o índice. A função consulta
+`classes_ == 1` para extrair a probabilidade positiva. O `pipeline.predict`
+usa a decisão padrão do estimador e não aplica esses limiares.
 
-- `tabelas/p3_previsoes_validacao_2024.csv.gz`: índice original, ano/mês, rodada, alvo, probabilidade e classe a 0,5; CSV comprimido para evitar duplicação volumosa.
+## Limitações
 
-- `tabelas/p3_comparacao_limiares.csv` e `tabelas/p3_calibracao_2024.csv`.
-
-- `figuras/p3_comparacao_ap.png`, `figuras/p3_precision_recall_validacao.png`, `figuras/p3_calibracao_validacao.png`.
-
-- `p3_execucao_2024.json`: proveniência, parâmetros, avisos, falhas e hashes.
-
-Reexecutar com `.venv/Scripts/python -m src.p3_modelagem.executar_validacao`; `--somente-relatorios` regenera gráficos e relatório dos resultados salvos sem novos ajustes. Sementes fixas garantem repetibilidade numérica dentro das tolerâncias de ponto flutuante; tempos dependem da máquina. Versões do ambiente estão no JSON. Testes: `.venv/Scripts/python -m pytest -q`.
-
-## Limitações e próxima decisão
-
-Três cortes consecutivos de um único ano não estabelecem generalização para outros anos. Pesos e limiares alteram o compromisso entre falsos positivos e perdas de fatais; não foi informado um custo operacional. O limiar por F1 é apenas candidato para revisão. Não há recalibração, SHAP, dashboard, busca extensa ou treinamento definitivo. A etapa encerra com decisões preliminares: após a revisão, congelar cenário, algoritmo, variante e limiar antes de uma única avaliação futura em 2025. Nenhuma avaliação de 2025 foi realizada.
+- 2025 foi reservado para a avaliação final da modelagem, mas já havia sido usado em
+  auditorias e análises exploratórias. Portanto, não é um conjunto completamente cego.
+- A engenharia de dados anterior foi produzida sobre 2024/2025 conjuntamente.
+  Excluir indicadores globais de outliers não elimina a dependência desse processamento.
+- A base contém somente acidentes registrados pela PRF, sem medida de exposição ao
+  tráfego e sem situações em que não houve acidente.
+- O cenário B não estima risco absoluto de acidente por trecho nem prevê sozinho
+  demanda de fiscalização. O cenário A depende de informações posteriores ao acidente.
+- A seleção de modelos e limiares em 2024 pode apresentar otimismo. Três cortes de um
+  único ano não demonstram superioridade estatística ou generalização ampla.
+- Não foram feitos testes independentes de generalização espacial nem análise causal.
+  Associações preditivas não demonstram efeito de intervenções de segurança viária.

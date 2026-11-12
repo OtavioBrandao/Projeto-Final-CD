@@ -1,9 +1,9 @@
-"""Etapa 04: nenhum teste comportamental acessa resultados reais de 2025."""
+"""Treinamento final, persistência e relatórios com dados sintéticos."""
 
-import json
-from pathlib import Path
 import subprocess
 import sys
+
+import hashlib
 
 import joblib
 import numpy as np
@@ -57,32 +57,35 @@ def test_temporal_preprocessamento_limiares_indices_e_persistencia(base, tmp_pat
         return p
 
     monkeypatch.setattr(ef, "criar_pipeline", fabrica)
-    m, previsoes, registros = ef.executar_avaliacao(base, tmp_path)
+    m, previsoes = ef.executar_avaliacao(base, tmp_path)
     assert chamadas == [("A", "xgboost"), ("B", "xgboost"), ("B", "dummy")]
     assert len({id(p) for p in pipelines}) == 3
     assert ef.LIMIARES == {"A": .2066718339920044, "B": .101788230240345}
     with pytest.raises(TypeError):
         ef.LIMIARES["A"] = .5
     teste = base.loc[base.ano.eq(2025)]
-    for registro, pipeline in zip(registros, pipelines, strict=True):
-        g = previsoes.loc[previsoes.modelo.eq(registro["modelo"])]
+    for (nome, cenario), pipeline in zip((("xgboost_A", "A"), ("xgboost_B", "B"), ("dummy", "B")), pipelines, strict=True):
+        limiar = ef.LIMIARES[cenario] if nome != "dummy" else .5
+        g = previsoes.loc[previsoes.modelo.eq(nome)]
         assert g.linha_original.tolist() == teste.index.tolist()
         assert g.y_real.tolist() == teste.acidente_fatal.tolist()
-        assert g.previsao.tolist() == g.probabilidade.ge(registro["limiar"]).astype(int).tolist()
+        assert g.previsao.tolist() == g.probabilidade.ge(limiar).astype(int).tolist()
         prep = pipeline[0]
         assert prep.named_transformers_["numericas"]["imputacao"].statistics_[0] == 2.5
         assert all("novo_2025" not in cats for cats in
                    prep.named_transformers_["categoricas"]["onehot"].categories_)
-        recarregado = joblib.load(tmp_path / f"p3_{registro['modelo']}.joblib")
-        x, _ = selecionar_xy(teste, registro["cenario"])
-        np.testing.assert_allclose(extrair_probabilidade_positiva(recarregado, x), g.probabilidade)
-        if registro["algoritmo"] == "xgboost":
+        if nome != "dummy":
+            recarregado = ef.carregar_pipeline(cenario, tmp_path)
+            x, _ = selecionar_xy(teste, cenario)
+            np.testing.assert_allclose(ef.prever(recarregado, teste, cenario).probabilidade, g.probabilidade)
             assert recarregado[-1].n_estimators == 100 and recarregado[-1].max_depth == 4
             assert recarregado[-1].learning_rate == .1
             assert recarregado[-1].scale_pos_weight is None
             assert len(prep.get_feature_names_out()) == prep.transform(x).shape[1]
     dummy = m.loc[m.modelo.eq("dummy")].iloc[0]
     assert dummy.ap == pytest.approx(1/6) and dummy.roc_auc == .5
+    assert not (tmp_path / "p3_dummy.joblib").exists()
+    assert len(list(tmp_path.glob("*.joblib"))) == 2
     assert len(m) == 5 and previsoes.ano.eq(2025).all()
     assert not previsoes.duplicated(["modelo", "linha_original"]).any()
     # Novo processo compatível consegue importar a função textual do pipeline.
@@ -109,61 +112,60 @@ def test_metricas_conhecidas_e_classe_positiva():
     assert extrair_probabilidade_positiva(Invertido(), pd.DataFrame(index=y.index)).equals(p.rename("probabilidade"))
 
 
-def test_relatorios_sinteticos_e_referencias_publicas(base, tmp_path, monkeypatch):
+@pytest.fixture
+def reports_2024(tmp_path):
+    destino = tmp_path / "validacao"
+    (destino / "tabelas").mkdir(parents=True)
+    resumos, limiares = [], []
+    for cenario in ("A", "B"):
+        linha = dict(cenario=cenario, algoritmo="xgboost", variante="padrao")
+        resumos.append({**linha, **{f"{m}_media": .25 for m in
+                                    ("ap", "roc_auc", "brier", "log_loss", "precision", "recall", "f1")}})
+        limiares.append({**linha, "tipo_limiar": "candidato_f1_ajuste",
+                        "limiar": ef.LIMIARES[cenario], "precision": .3, "recall": .4, "f1": .35})
+    pd.DataFrame(resumos).to_csv(destino / "tabelas/p3_resumo_validacao_2024.csv", index=False)
+    pd.DataFrame(limiares).to_csv(destino / "tabelas/p3_comparacao_limiares.csv", index=False)
+    return destino
+
+
+def test_relatorios_leem_csvs_sem_treinar_ou_carregar_modelos(base, tmp_path, monkeypatch, reports_2024):
     saida = tmp_path / "final"
     saida.mkdir()
-    m, p, modelos = ef.executar_avaliacao(base, tmp_path / "models")
-    meta = dict(csv=ev.referencia_publica(cfg.CSV_MODELAGEM), csv_sha256="sintetico",
-                git_head="teste", modelos=modelos, status="concluido")
-    ef.gerar_relatorios(m, p, meta, saida, cfg.RAIZ_REPOSITORIO / "reports")
-    ef.gravar_json(saida / "manifesto.json", meta)
-    for arquivo in ("README.md", "manifesto.json", "comparacao_2024_2025.csv", "calibracao_2025.csv"):
-        assert (saida / arquivo).stat().st_size > 100
-    assert len(list((saida / "figuras").glob("*.png"))) == 5
-    texto = (saida / "manifesto.json").read_text(encoding="utf-8")
-    assert "C:" not in texto and "Users" not in texto and "NaN" not in texto
-    assert ev.referencia_publica(cfg.CSV_MODELAGEM) == "data/processed/acidentes_prf_modelagem.csv"
-    assert ev.referencia_publica(tmp_path / "externo.csv") == "externo.csv"
-    comp = pd.read_csv(saida / "comparacao_2024_2025.csv")
-    assert np.allclose(comp.ap_delta_2025_menos_media_2024,
-                       comp.ap_teste_2025 - comp.ap_media_validacao_2024_05)
-    ef.gravar_json(tmp_path / "nan.json", {"indefinida": np.nan})
-    assert json.loads((tmp_path / "nan.json").read_text()) == {"indefinida": None}
+    m, p = ef.executar_avaliacao(base, tmp_path / "models")
+    ef.gerar_relatorios(m, p, saida, reports_2024)
     m.to_csv(saida / "metricas_2025.csv", index=False)
     p.to_csv(saida / "previsoes_2025.csv.gz", index=False)
-    hashes = {arquivo: ev.sha256(arquivo) for arquivo in
-              (saida / "metricas_2025.csv", saida / "previsoes_2025.csv.gz")}
+    arquivos = list(saida.glob("*.csv*"))
+    hashes = {a: hashlib.sha256(a.read_bytes()).hexdigest() for a in arquivos}
     def proibido(*args):
         pytest.fail("Somente relatórios não pode treinar/carregar modelos.")
     monkeypatch.setattr(ef, "criar_pipeline", proibido)
     monkeypatch.setattr(ef.joblib, "load", proibido)
-    monkeypatch.setattr(sys, "argv", ["final", "--somente-relatorios", "--saida", str(saida)])
+    monkeypatch.setattr(sys, "argv", ["final", "--somente-relatorios", "--saida", str(saida),
+                                    "--reports-2024", str(reports_2024)])
     ef.main()
-    assert hashes == {arquivo: ev.sha256(arquivo) for arquivo in hashes}
+    assert hashes == {a: hashlib.sha256(a.read_bytes()).hexdigest() for a in arquivos}
+    assert len(list((saida / "figuras").glob("*.png"))) == 5
+    assert not list(saida.glob("*.json"))
+    comp = pd.read_csv(saida / "comparacao_2024_2025.csv")
+    assert np.allclose(comp.ap_delta_2025_menos_media_2024,
+                       comp.ap_teste_2025 - comp.ap_media_validacao_2024_05)
 
 
-def test_reproduzir_publicados_2024_sem_fit_e_sem_modificar_originais(tmp_path, monkeypatch):
-    import shutil
-    fonte = cfg.RAIZ_REPOSITORIO / "reports"
-    hashes = {p: ev.sha256(p) for pasta in ("data", "src/p1_engenharia_dados", "src/p2_eda")
-              for p in (cfg.RAIZ_REPOSITORIO / pasta).rglob("*")
-              if p.is_file() and "__pycache__" not in p.parts}
-    # Copia exclusivamente artefatos necessários; manifesto publicado sem chave csv.
-    shutil.copytree(fonte / "tabelas", tmp_path / "tabelas")
-    meta = json.loads((fonte / "p3_execucao_2024.json").read_text(encoding="utf-8"))
-    meta.pop("csv", None)
-    ef.gravar_json(tmp_path / "p3_execucao_2024.json", meta)
-    tabelas = {p: ev.sha256(p) for p in (tmp_path / "tabelas").glob("*")}
+def test_relatorios_2024_independem_de_metadados(base, tmp_path, monkeypatch):
+    monkeypatch.setattr(ev, "ALGORITMOS", ("dummy",))
+    m, p = ev.executar_experimentos(base.loc[base.ano.eq(2024)], ponderados=False)
+    ev.salvar_relatorios(m, p, tmp_path)
+    arquivos = list((tmp_path / "tabelas").glob("*"))
+    hashes = {a: hashlib.sha256(a.read_bytes()).hexdigest() for a in arquivos}
     def proibido(*args):
-        pytest.fail("Reprodução não pode ajustar modelo.")
+        pytest.fail("Relatórios não podem ajustar modelos.")
     monkeypatch.setattr(ev, "criar_pipeline", proibido)
+    monkeypatch.setattr(ev, "carregar_base", proibido)
     monkeypatch.setattr(sys, "argv", ["validacao", "--somente-relatorios", "--saida", str(tmp_path)])
     ev.main()
-    assert tabelas == {p: ev.sha256(p) for p in tabelas}
-    assert hashes == {p: ev.sha256(p) for p in hashes}
-    texto = (tmp_path / "README_modelagem.md").read_text(encoding="utf-8")
-    assert "data/processed/acidentes_prf_modelagem.csv" in texto
-    assert "C:" not in texto and "Users" not in texto
+    assert hashes == {a: hashlib.sha256(a.read_bytes()).hexdigest() for a in arquivos}
+    assert not list(tmp_path.glob("*.json"))
 
 
 def test_rejeita_particoes_invalidas_antes_de_fit(base, tmp_path, monkeypatch):
