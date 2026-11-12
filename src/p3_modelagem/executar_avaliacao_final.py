@@ -66,8 +66,17 @@ def carregar_pipeline(cenario, modelos_dir=cfg.RAIZ_REPOSITORIO / "models"):
 
 
 def prever(pipeline, base, cenario):
-    """Probabilidades e classes pelo limiar congelado, com índice preservado."""
-    x, _ = selecionar_xy(base, cenario)
+    """Prevê a partir das features do cenário, sem exigir alvo ou ano."""
+    if cenario not in cfg.FEATURES_POR_CENARIO:
+        raise ValueError("Cenário deve ser A ou B.")
+    if base.empty or base.columns.has_duplicates or not base.index.is_unique or base.index.hasnans:
+        raise ValueError("Dados vazios, colunas duplicadas ou índice duplicado/nulo.")
+    features = cfg.FEATURES_POR_CENARIO[cenario]
+    faltantes = sorted(set(features) - set(base.columns))
+    if faltantes:
+        raise ValueError(f"Features ausentes no cenário {cenario}: {faltantes}.")
+    x = base.loc[:, list(features)].copy()
+    x["br"] = x["br"].astype("string")
     p = extrair_probabilidade_positiva(pipeline, x)
     return pd.DataFrame({"probabilidade": p, "previsao": p.ge(LIMIARES[cenario]).astype(int)})
 

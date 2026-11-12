@@ -138,7 +138,10 @@ python -m src.p3_modelagem.executar_avaliacao_final --saida reports/reproducao_2
 ```
 
 Esses dois últimos comandos treinam modelos; não são necessários para consumir os
-resultados publicados. O comando final recusa sobrescrever modelos ou resultados existentes.
+resultados publicados. A validação recusa executar se a pasta de saída já contiver
+CSVs da modelagem; escolha outra pasta com `--saida`. O comando final também recusa
+sobrescrever modelos ou resultados existentes. `--somente-relatorios` continua
+permitido nas pastas publicadas e não altera os CSVs.
 O argumento `--csv` permite indicar outra cópia da base com o mesmo esquema.
 `--reports-2024` indica a pasta de validação para a comparação final, quando necessário.
 
@@ -193,7 +196,10 @@ permitem integrar resultados sem nova inferência. Na tabela de métricas,
 `tipo_limiar` distingue o limiar selecionado, 0,5 descritivo e baseline.
 
 Para outras observações, `prever(pipeline, base, cenario)` devolve probabilidades
-e classes pelo limiar selecionado, preservando o índice. A função consulta
+e classes pelo limiar selecionado, preservando o índice. Passe um DataFrame com
+todas as features do cenário, nos mesmos tipos e unidades da base tratada; não são
+necessários `acidente_fatal`, `ano` ou as demais colunas do dataset. Colunas extras
+são ignoradas e as features são ordenadas conforme a configuração. A função consulta
 `classes_ == 1` para extrair a probabilidade positiva. O `pipeline.predict`
 usa a decisão padrão do estimador e não aplica esses limiares.
 

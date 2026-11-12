@@ -330,3 +330,22 @@ def test_entrada_principal_isola_2024(desenvolvimento, monkeypatch, tmp_path):
     monkeypatch.setattr("sys.argv", ["validacao", "--somente-relatorios", "--saida", str(tmp_path / "reports")])
     ev.main()
     assert hashes_antes == {f.name: sha256(f) for f in arquivos}
+
+
+@pytest.mark.parametrize("nome", ["p3_validacao_2024.csv", "p3_previsoes_validacao_2024.csv.gz"])
+def test_validacao_recusa_sobrescrever_antes_de_carregar_dados(tmp_path, monkeypatch, nome):
+    tabelas = tmp_path / "tabelas"
+    tabelas.mkdir()
+    existente = tabelas / nome
+    existente.write_bytes(b"resultado existente")
+    antes = sha256(existente)
+
+    def proibido(*args):
+        pytest.fail("A proteção deve ocorrer antes de carregar dados ou treinar.")
+
+    monkeypatch.setattr(ev, "carregar_base", proibido)
+    monkeypatch.setattr(ev, "executar_experimentos", proibido)
+    monkeypatch.setattr("sys.argv", ["validacao", "--saida", str(tmp_path)])
+    with pytest.raises(FileExistsError, match="--saida"):
+        ev.main()
+    assert sha256(existente) == antes

@@ -78,6 +78,14 @@ def test_temporal_preprocessamento_limiares_indices_e_persistencia(base, tmp_pat
             recarregado = ef.carregar_pipeline(cenario, tmp_path)
             x, _ = selecionar_xy(teste, cenario)
             np.testing.assert_allclose(ef.prever(recarregado, teste, cenario).probabilidade, g.probabilidade)
+            novas = teste.loc[:, list(cfg.FEATURES_POR_CENARIO[cenario])[::-1]].copy()
+            novas["coluna_extra"] = "ignorada"
+            antes = novas.copy(deep=True)
+            saida = ef.prever(recarregado, novas, cenario)
+            np.testing.assert_allclose(saida.probabilidade, g.probabilidade)
+            np.testing.assert_array_equal(saida.previsao, g.previsao)
+            assert saida.index.equals(novas.index)
+            pd.testing.assert_frame_equal(novas, antes)
             assert recarregado[-1].n_estimators == 100 and recarregado[-1].max_depth == 4
             assert recarregado[-1].learning_rate == .1
             assert recarregado[-1].scale_pos_weight is None
@@ -177,3 +185,19 @@ def test_rejeita_particoes_invalidas_antes_de_fit(base, tmp_path, monkeypatch):
     base.loc[base.ano.eq(2024), "acidente_fatal"] = 0
     with pytest.raises(ValueError, match="ambas"):
         ef.executar_avaliacao(base, tmp_path)
+
+
+@pytest.mark.parametrize("erro", ["cenario", "feature", "indice", "colunas"])
+def test_prever_rejeita_entrada_incompleta_ou_ambigua(base, erro):
+    novas = base.loc[:, list(cfg.FEATURES_B)].copy()
+    cenario = "B"
+    if erro == "cenario":
+        cenario = "C"
+    elif erro == "feature":
+        novas = novas.drop(columns="km")
+    elif erro == "indice":
+        novas.index = [0] * len(novas)
+    else:
+        novas = pd.concat([novas, novas[["km"]]], axis=1)
+    with pytest.raises(ValueError):
+        ef.prever(None, novas, cenario)

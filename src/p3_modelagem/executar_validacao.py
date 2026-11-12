@@ -159,6 +159,11 @@ def main():
         resultados = pd.read_csv(args.saida / "tabelas/p3_validacao_2024.csv", float_precision="round_trip")
         previsoes = pd.read_csv(args.saida / "tabelas/p3_previsoes_validacao_2024.csv.gz", float_precision="round_trip")
     else:
+        if any((args.saida / "tabelas").glob("p3_*.csv*")):
+            raise FileExistsError(
+                "Resultados de validação já existem; escolha outra pasta com --saida "
+                "ou use --somente-relatorios."
+            )
         base = carregar_base(args.csv)
         desenvolvimento = base.loc[base.ano.eq(cfg.ANO_DESENVOLVIMENTO)]
         resultados, previsoes = executar_experimentos(desenvolvimento)
