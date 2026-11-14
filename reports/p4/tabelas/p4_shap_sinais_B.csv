@@ -1,0 +1,3 @@
+sinal,variaveis_somadas,n_com,shap_medio_com,shap_medio_sem,diferenca_logodds,multiplicador_odds,esperado_pela_eda,confirma
+Madrugada ou noite,"hora, faixa_horaria",4057,0.30773807,-0.29223427,0.59997237,1.8220683336257935,aumenta,True
+Norte ou Nordeste,"uf, br, regiao, latitude, longitude",2710,0.3192977,-0.25809628,0.577394,1.7813901901245117,aumenta,True

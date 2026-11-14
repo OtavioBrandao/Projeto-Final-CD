@@ -1,0 +1,10 @@
+sinal,variaveis_somadas,n_com,shap_medio_com,shap_medio_sem,diferenca_logodds,multiplicador_odds,esperado_pela_eda,confirma
+Pedestre envolvido,envolve_pedestre,402,0.36812246,-0.044036057,0.41215852,1.5100736618041992,aumenta,True
+Madrugada ou noite,"hora, faixa_horaria, fase_dia",4057,0.23423903,-0.2606379,0.49487692,1.6402963399887085,aumenta,True
+Pista simples,tipo_pista,4841,0.10147388,-0.14759138,0.24906527,1.2828258275985718,aumenta,True
+Norte ou Nordeste,"uf, br, regiao, latitude, longitude",2710,0.28931794,-0.17498446,0.4643024,1.5909039974212646,aumenta,True
+Caminhão envolvido,envolve_caminhao,2543,0.444087,-0.25863373,0.70272076,2.0192391872406006,aumenta,True
+Trecho rural,area_urbana,5820,0.18670243,-0.36138025,0.5480827,1.7299330234527588,aumenta,True
+Colisão frontal,tipo_acidente,682,1.4006045,-0.2994427,1.7000473,5.47420597076416,aumenta,True
+Motocicleta envolvida,envolve_moto,4451,0.28228346,-0.17183043,0.4541139,1.5747772455215454,reduz,False
+"Chuva, garoa ou neblina",condicao_metereologica,1319,-0.09269278,0.014891086,-0.107583866,0.8980011940002441,reduz,True
